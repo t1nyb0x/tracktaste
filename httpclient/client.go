@@ -2,7 +2,6 @@ package httpclient
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/xerrors"
 )
 
 type TokenResponse struct {
@@ -21,7 +21,7 @@ type TokenResponse struct {
 func Fetch(url string, token string) (string, error) {
 	err := godotenv.Load()
 	if err != nil {
-		return "", fmt.Errorf(".envの読み込みに失敗しました: %w", err)
+		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
 	}
 
 
@@ -51,18 +51,18 @@ func Fetch(url string, token string) (string, error) {
 func GetAccessToken() (string, error) {
 	err := godotenv.Load()
 	if err != nil {
-		return "", fmt.Errorf(".envの読み込みに失敗しました: %w", err)
+		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
 	}
 
 	clientId := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	
 	if clientId == "" {
-		return "", fmt.Errorf("CLIENT_ID が設定されていません")
+		return "", xerrors.Errorf("CLIENT_ID が設定されていません")
 	}
 
 	if clientSecret == "" {
-		return "", fmt.Errorf("CLIENT_SECRET が設定されていません")
+		return "", xerrors.Errorf("CLIENT_SECRET が設定されていません")
 	}
 
 	// url.Valuesにフォームデータを詰める
@@ -95,7 +95,7 @@ func GetAccessToken() (string, error) {
 
 	var tokenRes TokenResponse
 	if err := json.Unmarshal(bodyBytes, &tokenRes); err != nil {
-		return "", fmt.Errorf("JSONのパースに失敗しました: %w", err)
+		return "", xerrors.Errorf("JSONのパースに失敗しました: %w", err)
 	}
 
 	return tokenRes.AccessToken, nil
