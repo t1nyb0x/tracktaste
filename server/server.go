@@ -12,7 +12,7 @@ func StartServer() {
 	r := mux.NewRouter()
 
 	// ルート
-	r.HandleFunc("/fetch-artist", handler.FetchArtistHandler).Methods("GET")
+	r.HandleFunc("/fetch-artist", handler.FetchArtistHandler).Methods("POST")
 
 	log.Println("サーバー起動中: http://localhost:8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {

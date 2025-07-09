@@ -18,7 +18,7 @@ type TokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-func Fetch(url string, token string) (string, error) {
+func GetArtistInfo(url string, token string) (string, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
