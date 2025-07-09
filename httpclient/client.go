@@ -18,13 +18,37 @@ type TokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-func GetArtistInfo(url string, token string) (string, error) {
+func init() {
 	err := godotenv.Load()
 	if err != nil {
-		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
+		panic(xerrors.Errorf(".envの読み込みに失敗しました: %w", err))
+	}
+}
+
+func GetTrackInfo(url string, token string) (string, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
 	}
 
+	req.Header.Set("Authorization", "Bearer "+token)
 
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bodyBytes), nil
+}
+
+func GetArtistInfo(url string, token string) (string, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
@@ -48,7 +72,7 @@ func GetArtistInfo(url string, token string) (string, error) {
 }
 
 
-func GetAccessToken() (string, error) {
+func GetSpotifyAccessToken() (string, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
@@ -100,4 +124,55 @@ func GetAccessToken() (string, error) {
 
 	return tokenRes.AccessToken, nil
 
+}
+
+func GetKKBoxAccessToken() (string, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
+	}
+
+	clientId := os.Getenv("KKBOX_ID")
+	clientSecret := os.Getenv("KKBOX_SECRET")
+
+	if clientId == "" {
+		return "", xerrors.Errorf("KKBOX_ID が設定されていません")
+	}
+
+	if clientSecret == "" {
+		return "", xerrors.Errorf("KKBOX_SECRET が設定されていません")
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_id", clientId)
+	form.Set("client_secret", clientSecret)
+
+	req, err := http.NewRequest("POST", "https://account.kkbox.com/oauth2/token",
+		strings.NewReader(form.Encode()))
+
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var tokenRes TokenResponse
+	if err := json.Unmarshal(bodyBytes, &tokenRes); err != nil {
+		return "", xerrors.Errorf("JSONのパースに失敗しました: %w", err)
+	}
+
+	return tokenRes.AccessToken, nil
 }

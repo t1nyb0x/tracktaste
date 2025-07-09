@@ -18,7 +18,7 @@ type Artist struct {
 // し、指定されたアーティストの情報を取得してレスポンスとして返します。
 // アクセストークンの取得に失敗した場合、エラーメッセージをHTTPレスポンスとして返します。
 func FetchArtistHandler(w http.ResponseWriter, r *http.Request) {
-    accessToken := TokenHandler(w)
+    accessToken := SpotifyTokenHandler(w)
     if accessToken == "" {
         return
     }
