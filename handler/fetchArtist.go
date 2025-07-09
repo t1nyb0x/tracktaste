@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -38,10 +37,11 @@ func FetchArtistHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     // JSON整形
-    raw, _ :=json.Marshal(body)
-    var pretty bytes.Buffer
-    json.Indent(&pretty, raw, "", "  ")
-
+    var payload map[string]any
+    if err := json.Unmarshal(body, &payload); err != nil {
+        http.Error(w, fmt.Sprintf("Error parsing JSON: %v", err), http.StatusInternalServerError)
+        return
+    }
     w.Header().Set("Content-Type", "application/json")
-    w.Write(pretty.Bytes())
+    json.NewEncoder(w).Encode(payload)
 }

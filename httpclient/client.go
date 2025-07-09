@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/xerrors"
@@ -25,33 +26,33 @@ func init() {
 	}
 }
 
-func GetTrackInfo(url string, token string) (string, error) {
+func GetTrackInfo(url string, token string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 5 * time.Second, // タイムアウトを設定
+	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, xerrors.Errorf("HTTP request failed with status: %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bodyBytes), nil
+	return io.ReadAll(resp.Body)
 }
 
-func GetArtistInfo(url string, token string) (string, error) {
+func GetArtistInfo(url string, token string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -59,16 +60,20 @@ func GetArtistInfo(url string, token string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, xerrors.Errorf("HTTP request failed with status: %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(bodyBytes), nil
+
+	return bodyBytes, nil
 }
 
 
