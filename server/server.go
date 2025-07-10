@@ -14,6 +14,7 @@ func StartServer() {
 	// ルート
 	r.HandleFunc("/fetch-artist", handler.FetchArtistHandler).Methods("POST")
 	r.HandleFunc("/searchTrack", handler.SearchTrack).Methods("GET")
+	r.HandleFunc("/getTrackInfo", handler.GetTrackInfo).Methods("GET")
 	// r.HandleFunc("/audio-recommendation", handler.AudioRecommendationHandler).Methods("POST")
 
 	log.Println("サーバー起動中: http://localhost:8080")
