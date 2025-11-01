@@ -181,3 +181,15 @@ func GetKKBoxAccessToken() (string, error) {
 
 	return tokenRes.AccessToken, nil
 }
+
+func GetLastFMApiKey() (string, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return "", xerrors.Errorf(".envの読み込みに失敗しました: %w", err)
+	}
+	apiKey := os.Getenv("LASTFM_API_KEY")
+	if apiKey == "" {
+		return "", xerrors.Errorf("LASTFM_API_KEY が設定されていません")
+	}
+	return apiKey, nil
+}

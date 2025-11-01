@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/t1nyb0x/tracktaste/httpclient"
+	"github.com/t1nyb0x/tracktaste/internal/httpclient"
 )
 
 // qパラメータに入った名前に一致するトラックを検索する

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/t1nyb0x/tracktaste/httpclient"
+	"github.com/t1nyb0x/tracktaste/internal/httpclient"
 )
 
 type Artist struct {

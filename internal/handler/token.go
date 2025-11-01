@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/t1nyb0x/tracktaste/httpclient"
+	"github.com/t1nyb0x/tracktaste/internal/httpclient"
 )
 
 func SpotifyTokenHandler(w http.ResponseWriter) string {
@@ -25,4 +25,14 @@ func KKBoxTokenHandler(w http.ResponseWriter) string {
     }
 
     return accessToken
+}
+
+func LastFMTokenHandler(w http.ResponseWriter) string {
+    apiKey, err := httpclient.GetLastFMApiKey()
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error getting API key: %v", err), http.StatusInternalServerError)
+        return ""
+    }
+
+    return apiKey
 }
