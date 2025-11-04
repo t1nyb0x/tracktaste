@@ -1,24 +1,44 @@
 package server
 
 import (
-	"log"
 	"net/http"
+	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/t1nyb0x/tracktaste/internal/handler"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/t1nyb0x/tracktaste/internal/api"
 )
 
-func StartServer() {
-	r := mux.NewRouter()
+type Options struct {
+	Addr string
+	Deps Deps
+}
 
-	// ルート
-	r.HandleFunc("/fetch-artist", handler.FetchArtistHandler).Methods("POST")
-	r.HandleFunc("/searchTrack", handler.SearchTrack).Methods("GET")
-	r.HandleFunc("/getSimilarTrack", handler.GetSimilarTrack).Methods("GET")
+type Deps struct {
+	Handler *api.Handler
+}
 
-	log.Println("サーバー起動中: http://localhost:8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
-		log.Fatalf("サーバー起動に失敗しました: %v", err)
+func New(opts Options, deps Deps) *http.Server {
+
+	// init router
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID, middleware.Recoverer, middleware.Timeout(15 * time.Second), middleware.Logger)
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) })
+	
+
+	// router
+	r.Route("/v1", func(r chi.Router) {
+		r.Post("/artists/fetch", deps.Handler.FetchArtist)
+		r.Get("/tracks/search", deps.Handler.SearchTrack)
+		// r.Get("/tracks/similar", h.GetSimilarTrack)
+	})
+
+	// server setting
+	return &http.Server{
+		Handler: r,
+		Addr:    opts.Addr,
+		ReadTimeout: 10 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
-	log.Println("サーバー終了")
 }
