@@ -13,6 +13,7 @@ import (
 	"github.com/t1nyb0x/tracktaste/internal/api"
 	"github.com/t1nyb0x/tracktaste/internal/config"
 	"github.com/t1nyb0x/tracktaste/internal/infra/lastfm"
+	"github.com/t1nyb0x/tracktaste/internal/infra/spotify"
 	"github.com/t1nyb0x/tracktaste/internal/repository"
 	"github.com/t1nyb0x/tracktaste/internal/service"
 	"github.com/t1nyb0x/tracktaste/server"
@@ -70,14 +71,15 @@ func main() {
 	}
 
 	lfm := lastfm.New(cfg.LastFM.APIKey)
+	spotifyClient := spotify.New(cfg.Spotify.APIKey, cfg.Spotify.Secret)
 	repo := struct{
 		repository.ArtistRepo
-	}{ArtistRepo: lfm}
+		repository.TrackRepo
+	}{ArtistRepo: lfm, TrackRepo: spotifyClient}
 
 	artistSvc := service.NewArtistService(repo.ArtistRepo)
 	trackSvc := service.NewTrackService(repo.TrackRepo)
-	h := api.NewHandler(artistSvc)
-
+	h := api.NewHandler(artistSvc, trackSvc)
 
 	srv := server.New(server.Options{Addr: cfg.HTTP.Addr}, server.Deps{Handler: h})
 
@@ -107,4 +109,3 @@ func main() {
 		}
 	}
 }
-

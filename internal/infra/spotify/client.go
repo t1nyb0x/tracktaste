@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -23,18 +25,33 @@ func New(APIKey string, Secret string) *Client {
 	}
 }
 
-func (c *Client) GetBearerToken(ctx context.Context, params url.Values) (string, error) {
-	params.Set("grant_type", "client_credentials")
-	params.Set("client_id", c.APIKey)
-	params.Set("client_secret", c.Secret)
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://accounts.spotify.com/api/token", nil)
+func (c *Client) GetBearerToken(ctx context.Context) (string, error) {
+	data := url.Values{}
+	data.Set("grant_type", "client_credentials")
+	data.Set("client_id", c.APIKey)
+	data.Set("client_secret", c.Secret)
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		"https://accounts.spotify.com/api/token",
+		strings.NewReader(data.Encode()),
+	)
+	
 	if err != nil { return "", err }
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 	res, err := c.httpc.Do(req)
+
 	if err != nil { return "", err }
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
+
+	if res.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("spotify: status %d", res.StatusCode)
 	}
+
 	var resp struct {
 		AccessToken string `json:"access_token"`
 		TokenType   string `json:"token_type"`
@@ -48,15 +65,29 @@ func (c *Client) GetBearerToken(ctx context.Context, params url.Values) (string,
 
 
 
-func (c *Client) get(ctx context.Context, params url.Values, v any) error {
-	params.Set("bearer_token", c.bearerToken)
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.spotify.com/v1/tracks/" + params.Encode(), nil)
-	if err != nil { return err }
+func (c *Client) FetchById(ctx context.Context, params string, v any) error {
+	log.Println("[DEBUG] FetchById called with params:", params)
+	// Get bearer token with required arguments
+	token, err := c.GetBearerToken(ctx)
+	if err != nil {
+		return err
+	}
+	log.Println("[DEBUG] Obtained bearer token")
+
+	// Create request with proper authorization header
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.spotify.com/v1/tracks/" + params, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer " + token)
+
 	res, err := c.httpc.Do(req)
 	if err != nil { return err }
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
+
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("spotify: status %d", res.StatusCode)
 	}
+
 	return json.NewDecoder(res.Body).Decode(v)
 }

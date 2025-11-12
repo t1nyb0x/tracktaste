@@ -29,6 +29,7 @@ func New(opts Options, deps Deps) *http.Server {
 	// router
 	r.Route("/v1", func(r chi.Router) {
 		r.Post("/artists/fetch", deps.Handler.FetchArtist)
+		r.Get("/tracks/fetch", deps.Handler.FetchTrackByURL)
 		r.Get("/tracks/search", deps.Handler.SearchTrack)
 		// r.Get("/tracks/similar", h.GetSimilarTrack)
 	})

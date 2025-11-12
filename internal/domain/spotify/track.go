@@ -7,8 +7,8 @@ type Track struct {
 	DiscNumber        int16             `json:"disc_number"`
 	DurationMs        int32             `json:"duration_ms"`
 	Explicit          bool              `json:"explicit"`
-	ExternalIDs       map[string]string `json:"external_ids"`
-	ExternalURLs      map[string]string `json:"external_urls"`
+	TrackExternalIDs       TrackExternalIDs   `json:"external_ids"`
+	TrackExternalUrls   TrackExternalUrls `json:"external_urls"`
 	Href              string            `json:"href"`
 	ID                string            `json:"id"`
 	IsPlayable        bool              `json:"is_playable"`
@@ -22,13 +22,25 @@ type Track struct {
 	IsLocal           bool              `json:"is_local"`
 }
 
+type TrackExternalUrls struct {
+	SpotifyTrackURL string `json:"spotify"`
+}
+
+type TrackExternalIDs struct {
+	ISRC string `json:"isrc"`
+}
+
 type Artist struct {
-	ExternalURLs map[string]string `json:"external_urls"`
+	ArtistExternalURLs ArtistExternalUrls `json:"external_urls"`
 	Href         string            `json:"href"`
 	ID           string            `json:"id"`
-	Name         string            `json:"name"`
+	ArtistName         string            `json:"name"`
 	Typee        string            `json:"type"`
 	URI          string            `json:"uri"`
+}
+
+type ArtistExternalUrls struct {
+	SpotifyArtistURL string `json:"spotify"`
 }
 
 type Image struct {

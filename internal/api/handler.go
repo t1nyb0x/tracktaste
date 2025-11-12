@@ -7,10 +7,6 @@ type Handler struct {
 	Track  *service.TrackService
 }
 
-func ArtistHandler(artist *service.ArtistService) *Handler {
-	return &Handler{Artist: artist}
-}
-
-func TrackHandler(track *service.TrackService) *Handler {
-	return &Handler{Track: track}
+func NewHandler(artist *service.ArtistService, track *service.TrackService) *Handler {
+	return &Handler{Artist: artist, Track: track}
 }
