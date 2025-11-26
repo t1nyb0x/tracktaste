@@ -14,14 +14,14 @@ Spotify と KKBOX を連携した音楽トラック情報取得・類似曲検�
 
 - **言語**: Go 1.24
 - **フレームワーク**: [go-chi/chi](https://github.com/go-chi/chi) v5
-- **キャッシュ**: Redis（トークンキャッシュ用）
+- **キャッシュ**: 2 層キャッシュ（L1: インメモリ, L2: Redis）
 - **外部 API**: Spotify Web API, KKBOX Open API
 - **アーキテクチャ**: Clean Architecture
 
 ## 必要要件
 
 - Go 1.24 以上
-- Redis（オプション、トークンキャッシュ用）
+- Redis（オプション、L2 キャッシュ用。なくてもインメモリキャッシュで動作）
 - Spotify Developer アカウント
 - KKBOX Developer アカウント
 
@@ -50,8 +50,9 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 KKBOX_ID=your_kkbox_client_id
 KKBOX_SECRET=your_kkbox_client_secret
 
-# Redis (optional)
-REDIS_ADDR=localhost:6379
+# Redis (optional - L2 cache)
+REDIS_URL=localhost:6379
+REDIS_PASSWORD=
 ```
 
 ### 3. 依存関係のインストール
@@ -132,6 +133,10 @@ tracktaste/
 │   ├── usecase/         # ビジネスロジック
 │   ├── adapter/         # 外部接続
 │   │   ├── gateway/     # 外部API実装
+│   │   │   ├── cache/   # 2層キャッシュ（L1:メモリ, L2:Redis）
+│   │   │   ├── redis/   # Redisクライアント
+│   │   │   ├── spotify/ # Spotify API
+│   │   │   └── kkbox/   # KKBOX API
 │   │   ├── handler/     # HTTPハンドラー
 │   │   └── server/      # サーバー設定
 │   ├── config/          # 設定
