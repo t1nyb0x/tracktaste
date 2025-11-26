@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -27,9 +29,21 @@ type config struct {
 	kkboxSecret   string
 }
 
+// getProjectRoot はプロジェクトルートのパスを取得します。
+// このファイル（cmd/server/main.go）から2階層上がプロジェクトルートです。
+func getProjectRoot() string {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return "."
+	}
+	return filepath.Join(filepath.Dir(currentFile), "..", "..")
+}
+
 func loadConfig() (*config, error) {
-	if err := godotenv.Load(".env"); err != nil {
-		log.Println("Warning: Error loading .env file")
+	// プロジェクトルートの .env を読み込む
+	envPath := filepath.Join(getProjectRoot(), ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		log.Printf("Warning: Error loading .env file from %s", envPath)
 	}
 
 	cfg := &config{

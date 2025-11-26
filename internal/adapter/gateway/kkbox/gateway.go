@@ -96,7 +96,9 @@ func (g *Gateway) SearchByISRC(ctx context.Context, isrc string) (*external.KKBO
 		return nil, err
 	}
 
-	u := fmt.Sprintf("%s/search?q=%s&type=track&territory=%s&limit=1", apiBaseURL, url.QueryEscape(isrc), territory)
+	// KKBOX APIではISRCで検索する場合、"isrc:" プレフィックスが必要
+	query := fmt.Sprintf("isrc:%s", isrc)
+	u := fmt.Sprintf("%s/search?q=%s&type=track&territory=%s&limit=1", apiBaseURL, url.QueryEscape(query), territory)
 	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return nil, err
@@ -140,7 +142,7 @@ func (g *Gateway) GetRecommendedTracks(ctx context.Context, trackID string) ([]e
 		return nil, err
 	}
 
-	u := fmt.Sprintf("%s/tracks/%s/related-tracks?territory=%s&limit=50", apiBaseURL, trackID, territory)
+	u := fmt.Sprintf("%s/tracks/%s/recommended-tracks?territory=%s&limit=50", apiBaseURL, trackID, territory)
 	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return nil, err
@@ -158,18 +160,21 @@ func (g *Gateway) GetRecommendedTracks(ctx context.Context, trackID string) ([]e
 	}
 
 	var result struct {
-		Data []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"data"`
+		Tracks struct {
+			Data []struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+				ISRC string `json:"isrc"`
+			} `json:"data"`
+		} `json:"tracks"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
 		return nil, err
 	}
 
-	tracks := make([]external.KKBOXTrackInfo, len(result.Data))
-	for i, t := range result.Data {
-		tracks[i] = external.KKBOXTrackInfo{ID: t.ID, Name: t.Name}
+	tracks := make([]external.KKBOXTrackInfo, len(result.Tracks.Data))
+	for i, t := range result.Tracks.Data {
+		tracks[i] = external.KKBOXTrackInfo{ID: t.ID, Name: t.Name, ISRC: t.ISRC}
 	}
 	return tracks, nil
 }

@@ -61,15 +61,11 @@ func (uc *SimilarTracksUseCase) FetchSimilar(ctx context.Context, trackID string
 		return &domain.SimilarTracksResult{Items: []domain.SimilarTrack{}}, nil
 	}
 
-	logger.Info("SimilarTracks", "KKBOXから詳細情報を取得")
+	// recommended-tracks APIのレスポンスから直接ISRCを取得
 	isrcList := make([]string, 0, len(recommended))
 	for _, t := range recommended {
-		detail, err := uc.kkboxAPI.GetTrackDetail(ctx, t.ID)
-		if err != nil || detail == nil {
-			continue
-		}
-		if detail.ISRC != "" {
-			isrcList = append(isrcList, detail.ISRC)
+		if t.ISRC != "" {
+			isrcList = append(isrcList, t.ISRC)
 		}
 	}
 
