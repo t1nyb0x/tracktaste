@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+spec/
+LICENSE
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+server
+
+# Development tools
+.air.toml
+.specify/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
