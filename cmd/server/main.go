@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/cache"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/kkbox"
 	redisGateway "github.com/t1nyb0x/tracktaste/internal/adapter/gateway/redis"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/spotify"
@@ -77,13 +78,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Initialize Redis (L2 cache)
+	var redisRepo *redisGateway.TokenRepository
 	if err := redisGateway.Init(); err != nil {
-		logger.Warning("Main", "Redis connection failed")
+		logger.Warning("Main", "Redis connection failed - using memory cache only")
 	} else {
 		logger.Info("Main", "Redis connected")
+		redisRepo = redisGateway.NewTokenRepository()
 	}
 
-	tokenRepo := redisGateway.NewTokenRepository()
+	// Create two-level cache (L1: memory, L2: Redis)
+	tokenRepo := cache.NewCachedTokenRepository(redisRepo)
+	logger.Info("Main", "Token cache initialized (L1: memory, L2: Redis)")
+
 	spotifyGW := spotify.NewGateway(cfg.spotifyID, cfg.spotifySecret, tokenRepo)
 	kkboxGW := kkbox.NewGateway(cfg.kkboxID, cfg.kkboxSecret, tokenRepo)
 
