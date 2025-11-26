@@ -12,10 +12,13 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/t1nyb0x/tracktaste/internal/api"
 	"github.com/t1nyb0x/tracktaste/internal/config"
+	"github.com/t1nyb0x/tracktaste/internal/infra/kkbox"
 	"github.com/t1nyb0x/tracktaste/internal/infra/lastfm"
+	redisClient "github.com/t1nyb0x/tracktaste/internal/infra/redis"
 	"github.com/t1nyb0x/tracktaste/internal/infra/spotify"
 	"github.com/t1nyb0x/tracktaste/internal/repository"
 	"github.com/t1nyb0x/tracktaste/internal/service"
+	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 	"github.com/t1nyb0x/tracktaste/server"
 )
 
@@ -23,10 +26,10 @@ func loadConfig() (config.Config, error) {
 
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("Warning: Error loading .env file, using environment variables")
 	}
 
-	cfg := config.Config {
+	cfg := config.Config{
 		HTTP: config.HTTP{
 			Addr: getEnv("HTTP_ADDR", ":8080"),
 		},
@@ -43,12 +46,8 @@ func loadConfig() (config.Config, error) {
 		},
 	}
 
-
-	if cfg.LastFM.APIKey == "" {
-		return cfg, fmt.Errorf("LASTFM_API_KEY is not set")
-	}
 	if cfg.KKBOX.APIKey == "" || cfg.KKBOX.Secret == "" {
-		return cfg, fmt.Errorf("KKBOX_API_KEY or KKBOX_SECRET is not set")
+		return cfg, fmt.Errorf("KKBOX_ID or KKBOX_SECRET is not set")
 	}
 	if cfg.Spotify.APIKey == "" || cfg.Spotify.Secret == "" {
 		return cfg, fmt.Errorf("SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET is not set")
@@ -70,20 +69,31 @@ func main() {
 		log.Fatal(fmt.Errorf("failed to load config: %w", err))
 	}
 
+	// Initialize Redis
+	if err := redisClient.Init(); err != nil {
+		logger.Warning("Main", fmt.Sprintf("Redis connection failed: %v. Token caching disabled.", err))
+	} else {
+		logger.Info("Main", "Redis connection established")
+	}
+
+	// Initialize clients
 	lfm := lastfm.New(cfg.LastFM.APIKey)
 	spotifyClient := spotify.New(cfg.Spotify.APIKey, cfg.Spotify.Secret)
-	repo := struct{
+	kkboxClient := kkbox.New(cfg.KKBOX.APIKey, cfg.KKBOX.Secret)
+
+	repo := struct {
 		repository.ArtistRepo
 		repository.TrackRepo
 	}{ArtistRepo: lfm, TrackRepo: spotifyClient}
 
 	artistSvc := service.NewArtistService(repo.ArtistRepo)
 	trackSvc := service.NewTrackService(repo.TrackRepo)
-	h := api.NewHandler(artistSvc, trackSvc)
+	h := api.NewHandler(artistSvc, trackSvc, spotifyClient, kkboxClient)
 
 	srv := server.New(server.Options{Addr: cfg.HTTP.Addr}, server.Deps{Handler: h})
 
 	// startup
+	logger.Info("Main", fmt.Sprintf("Server starting on %s", cfg.HTTP.Addr))
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- srv.ListenAndServe()
@@ -94,18 +104,17 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	select {
 	case sig := <-quit:
-		log.Println("受信:", sig.String(), "シャットダウン開始...")
-		ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+		logger.Info("Main", fmt.Sprintf("Received signal: %s, starting shutdown...", sig.String()))
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Fatal("サーバーのシャットダウンに失敗しました:", err)
+			logger.Fatal("Main", fmt.Sprintf("Server shutdown failed: %v", err))
 		}
 
-		log.Println("サーバー終了")
-		_ = srv.Shutdown(ctx)
+		logger.Info("Main", "Server stopped")
 	case err := <-errCh:
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			logger.Fatal("Main", err.Error())
 		}
 	}
 }
