@@ -12,6 +12,7 @@
   - [仕様](#仕様)
     - [機能](#機能)
     - [トラック情報取得 API](#トラック情報取得-api)
+    - [トラック検索 API](#トラック検索-api)
     - [アーティスト情報取得 API](#アーティスト情報取得-api)
     - [アルバム情報取得 API](#アルバム情報取得-api)
     - [類似トラック取得 API](#類似トラック取得-api)
@@ -30,21 +31,27 @@
 
 TrackTaste は SpotifyURL から各種情報を取得する Go 製 API です。
 
-ルーティングは chi を使用し、エラー出力には xerrors を適宜使用します。
+ルーティングには chi を使用しています。
+
+アーキテクチャは Clean Architecture を採用しています。詳細は [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) を参照してください。
 
 ## API エンドポイント
 
-トラック情報取得: GET /track/fetch?url={url} 実装済みだが、ここの仕様とは異なるレスポンスが返ってきてる状態。要改修。
+ヘルスチェック: GET /healthz
 
-アーティスト情報取得: GET /artist/fetch?url={url} 実装済みだが、lastfm を使うようになっている。Spotify で取得するように変更したい。
+トラック情報取得: GET /v1/track/fetch?url={url}
 
-アルバム情報取得: GET /album/fetch?url={url} 未実装
+トラック検索: GET /v1/track/search?q={query}
 
-類似トラック取得: GET /track/similar?url={url} 未実装
+類似トラック取得: GET /v1/track/similar?url={url}
+
+アーティスト情報取得: GET /v1/artist/fetch?url={url}
+
+アルバム情報取得: GET /v1/album/fetch?url={url}
 
 ## URL からの ID 抽出
 
-internal/util/extractSpotifyTrackId を使用するが、artist と album の ID を抽出する処理ができていないため、extractSpotifyTrackId を参照して同様な実装を行う
+internal/adapter/handler/extract.go を使用して Spotify の URL から ID を抽出します
 
 ### 対応する URL パターン
 
@@ -78,6 +85,7 @@ internal/util/extractSpotifyTrackId を使用するが、artist と album の ID
 ### 機能
 
 - トラック情報取得 API
+- トラック検索 API
 - アーティスト情報取得 API
 - アルバム情報取得 API
 - 類似トラック取得 API
@@ -85,6 +93,14 @@ internal/util/extractSpotifyTrackId を使用するが、artist と album の ID
 ### トラック情報取得 API
 
 [仕様書](./track-fetch-spec.md)を参照
+
+### トラック検索 API
+
+Spotify の検索 API を使用してキーワードでトラックを検索します。
+
+- エンドポイント: `GET /v1/track/search?q={query}`
+- パラメータ: `q` - 検索クエリ（曲名、アーティスト名など）
+- レスポンス: トラック情報の配列
 
 ### アーティスト情報取得 API
 
@@ -102,17 +118,19 @@ internal/util/extractSpotifyTrackId を使用するが、artist と album の ID
 
 API リクエストを行う場合は、Bearer Token の取得が必要です。
 
-Spotify は実装済みですが、KKBOX は未実装のため実装を行ってください。
+Spotify、KKBOX ともに実装済みです。
 
-リクエスト時は、BearerToken を Authorization ヘッダーに入れて行ってください。
+リクエスト時は、BearerToken を Authorization ヘッダーに入れて行います。
 
 BearerToken は Redis で管理を行います。
 
-サービス名、トークン、有効期限 yyyy/MM/dd HH:mm:ss で管理すること。
+サービス名、トークン、有効期限で管理しています。
 
 発行したトークンは Redis に保存し、基本的に Redis からトークンを取得します。
 
 トークンが有効期限切れの場合、トークンを再発行します。
+
+Redis が利用不可の場合でも、毎回トークンを取得することで動作します。
 
 ### Spotify の BearerToken 取得について
 
