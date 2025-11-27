@@ -43,8 +43,8 @@ func (e *ExtractError) Error() string {
 
 // Error codes for URL extraction errors.
 const (
-	ErrCodeEmptyParam         = "EMPTY_PARAM"
-	ErrCodeNotSpotifyURL      = "NOT_SPOTIFY_URL"
+	ErrCodeEmptyParam          = "EMPTY_PARAM"
+	ErrCodeNotSpotifyURL       = "NOT_SPOTIFY_URL"
 	ErrCodeDifferentSpotifyURL = "DIFFERENT_SPOTIFY_URL"
-	ErrCodeInvalidURL         = "INVALID_URL"
+	ErrCodeInvalidURL          = "INVALID_URL"
 )

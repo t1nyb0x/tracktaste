@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/cache"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/kkbox"
 	redisGateway "github.com/t1nyb0x/tracktaste/internal/adapter/gateway/redis"
@@ -119,7 +120,9 @@ func main() {
 		logger.Info("Main", fmt.Sprintf("Shutting down: %s", sig))
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		srv.Shutdown(ctx)
+		if err := srv.Shutdown(ctx); err != nil {
+			logger.Error("Main", fmt.Sprintf("Shutdown error: %s", err))
+		}
 		logger.Info("Main", "Server stopped")
 	case err := <-errCh:
 		if err != nil && err != http.ErrServerClosed {

@@ -1,5 +1,8 @@
 # TrackTaste
 
+[![CI](https://github.com/t1nyb0x/tracktaste/actions/workflows/ci.yml/badge.svg)](https://github.com/t1nyb0x/tracktaste/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/t1nyb0x/tracktaste/branch/main/graph/badge.svg)](https://codecov.io/gh/t1nyb0x/tracktaste)
+
 Spotify と KKBOX を連携した音楽トラック情報取得・類似曲検索 API サーバーです。
 
 ## 機能
@@ -74,6 +77,61 @@ cd cmd/server
 air
 ```
 
+## Docker
+
+### Docker Compose で起動（推奨）
+
+```bash
+# 開発環境
+docker compose up -d
+
+# 本番環境
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Docker イメージの取得
+
+```bash
+# 最新版
+docker pull ghcr.io/t1nyb0x/tracktaste:latest
+
+# 特定バージョン
+docker pull ghcr.io/t1nyb0x/tracktaste:v1.0.0
+```
+
+### 手動でビルド
+
+```bash
+docker build -t tracktaste .
+docker run -p 8080:8080 --env-file .env tracktaste
+```
+
+## テスト
+
+```bash
+# 全テスト実行
+go test ./...
+
+# カバレッジ付き
+go test ./... -cover
+
+# 詳細出力
+go test ./... -v
+
+# 特定パッケージのみ
+go test ./internal/usecase/...
+```
+
+### Lint
+
+```bash
+# golangci-lint をインストール
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+# lint 実行
+golangci-lint run
+```
+
 ## API エンドポイント
 
 ### ヘルスチェック
@@ -146,6 +204,23 @@ tracktaste/
 ```
 
 詳細なアーキテクチャについては [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) を参照してください。
+
+## CI/CD
+
+GitHub Actions によるワークフロー:
+
+| ワークフロー                | トリガー     | 内容                                 |
+| --------------------------- | ------------ | ------------------------------------ |
+| **CI** (`ci.yml`)           | push/PR      | Lint, Test, Build                    |
+| **Publish** (`publish.yml`) | main push    | Docker イメージを ghcr.io に publish |
+| **Release** (`release.yml`) | Release 作成 | バージョンタグ付きイメージを publish |
+
+### Docker イメージタグ
+
+- `latest` - 最新の main ブランチ
+- `v1.2.3` - リリースバージョン
+- `v1.2` - マイナーバージョン
+- `<sha>` - コミットハッシュ
 
 ## ライセンス
 

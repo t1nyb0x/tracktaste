@@ -137,14 +137,14 @@ type similarTracksResponse struct {
 }
 
 type similarTrackResult struct {
-	Album       similarAlbumResult   `json:"album"`
-	ISRC        *string              `json:"isrc"`
-	UPC         *string              `json:"upc"`
-	URL         string               `json:"url"`
-	ID          string               `json:"id"`
-	Name        string               `json:"name"`
-	Popularity  *int                 `json:"popularity"`
-	TrackNumber int                  `json:"track_number"`
+	Album       similarAlbumResult `json:"album"`
+	ISRC        *string            `json:"isrc"`
+	UPC         *string            `json:"upc"`
+	URL         string             `json:"url"`
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Popularity  *int               `json:"popularity"`
+	TrackNumber int                `json:"track_number"`
 }
 
 type similarAlbumResult struct {
