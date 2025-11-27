@@ -4,10 +4,6 @@ type HTTP struct {
 	Addr string
 }
 
-type LastFM struct {
-	APIKey string
-}
-
 type KKBOX struct {
 	APIKey string
 	Secret string
@@ -19,8 +15,7 @@ type Spotify struct {
 }
 
 type Config struct {
-	HTTP   HTTP
-	LastFM  LastFM
+	HTTP    HTTP
 	KKBOX   KKBOX
 	Spotify Spotify
 }
