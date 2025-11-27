@@ -31,8 +31,8 @@ type SimpleTrack struct {
 
 // SimilarTrack represents a track returned from similar tracks search.
 type SimilarTrack struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
 	ISRC        *string `json:"isrc,omitempty"`
 	UPC         *string `json:"upc,omitempty"`
 	URL         string  `json:"url"`
