@@ -27,6 +27,7 @@ type trackResult struct {
 	ID          string              `json:"id"`
 	Name        string              `json:"name"`
 	TrackNumber int                 `json:"track_number"`
+	DurationMs  int                 `json:"duration_ms"`
 	Explicit    bool                `json:"explicit"`
 }
 
@@ -196,6 +197,7 @@ func convertTrackToResult(t *domain.Track) trackResult {
 		ID:          t.ID,
 		Name:        t.Name,
 		TrackNumber: t.TrackNumber,
+		DurationMs:  t.DurationMs,
 		Explicit:    t.Explicit,
 	}
 }
