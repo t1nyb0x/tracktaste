@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/t1nyb0x/tracktaste/compare/v1.0.0...v1.1.0) (2025-11-30)
+
+
+### Features
+
+* トラック情報の返却にexplicit情報を追加 ([03c84cd](https://github.com/t1nyb0x/tracktaste/commit/03c84cd10a56da7f5ea1c2600e3218ca3bcf38a3))
+* トラック情報の返却にexplicit情報を追加 ([b1255f7](https://github.com/t1nyb0x/tracktaste/commit/b1255f7d236dc65d35573316c599b643e54e78dd))
+
 ## 1.0.0 (2025-11-27)
 
 
