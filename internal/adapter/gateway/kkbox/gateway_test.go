@@ -123,12 +123,12 @@ func TestGateway_FetchToken(t *testing.T) {
 
 func TestGateway_SearchByISRC_ResponseParsing(t *testing.T) {
 	tests := []struct {
-		name          string
-		response      map[string]interface{}
-		expectedNil   bool
-		expectedID    string
-		expectedName  string
-		expectedISRC  string
+		name         string
+		response     map[string]interface{}
+		expectedNil  bool
+		expectedID   string
+		expectedName string
+		expectedISRC string
 	}{
 		{
 			name: "正常系: トラック発見",

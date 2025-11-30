@@ -275,22 +275,6 @@ func TestRawAlbum_ToDomainSimple(t *testing.T) {
 	}
 }
 
-// Integration tests with mock HTTP server
-func setupMockServer(handler http.HandlerFunc) (*httptest.Server, *Gateway) {
-	server := httptest.NewServer(handler)
-	repo := newMockTokenRepo()
-	repo.tokens["spotify"] = "mock_token"
-
-	gw := &Gateway{
-		clientID:  "test_client",
-		secret:    "test_secret",
-		httpc:     server.Client(),
-		tokenRepo: repo,
-	}
-
-	return server, gw
-}
-
 func TestGateway_FetchToken(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {

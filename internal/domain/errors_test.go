@@ -101,10 +101,10 @@ func TestDomainErrors_Is(t *testing.T) {
 
 func TestExtractError(t *testing.T) {
 	tests := []struct {
-		name            string
-		code            string
-		message         string
-		expectedError   string
+		name          string
+		code          string
+		message       string
+		expectedError string
 	}{
 		{
 			name:          "空のパラメータエラー",
