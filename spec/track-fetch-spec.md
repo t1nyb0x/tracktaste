@@ -54,7 +54,10 @@ Param example: https://open.spotify.com/intl-ja/track/22ev7LxXzh9gZ274L5UG9c?si=
     "isrc": string|null,
     "url": string,
     "id": string,
-    "track_number": int
+    "name": string,
+    "track_number": int,
+    "duration_ms": int,
+    "explicit": bool
   }
 }
 ```
