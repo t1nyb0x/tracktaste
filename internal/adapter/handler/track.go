@@ -151,6 +151,8 @@ type similarTrackResult struct {
 	Name        string             `json:"name"`
 	Popularity  *int               `json:"popularity"`
 	TrackNumber int                `json:"track_number"`
+	DurationMs  int                `json:"duration_ms"`
+	Explicit    bool               `json:"explicit"`
 }
 
 type similarAlbumResult struct {
@@ -235,6 +237,8 @@ func convertSimilarTracks(tracks []domain.SimilarTrack) []similarTrackResult {
 			Name:        t.Name,
 			Popularity:  t.Popularity,
 			TrackNumber: t.TrackNumber,
+			DurationMs:  t.DurationMs,
+			Explicit:    t.Explicit,
 		}
 	}
 	return results

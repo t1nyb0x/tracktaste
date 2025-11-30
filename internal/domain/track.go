@@ -38,6 +38,8 @@ type SimilarTrack struct {
 	URL         string  `json:"url"`
 	Popularity  *int    `json:"popularity,omitempty"`
 	TrackNumber int     `json:"track_number"`
+	DurationMs  int     `json:"duration_ms"`
+	Explicit    bool    `json:"explicit"`
 	Album       Album   `json:"album"`
 }
 

@@ -87,6 +87,8 @@ Param example: https://open.spotify.com/intl-ja/track/22ev7LxXzh9gZ274L5UG9c?si=
             "name": string,
             "popularity": int|null,
             "track_number": int,
+            "duration_ms": int,
+            "explicit": bool
         }
     ]
   }
