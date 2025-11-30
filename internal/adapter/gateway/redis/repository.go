@@ -84,3 +84,17 @@ func (r *TokenRepository) IsTokenValid(ctx context.Context, key string) bool {
 	exists, err := client.Exists(ctx, redisKey).Result()
 	return err == nil && exists > 0
 }
+
+// InvalidateToken removes a token from Redis.
+// This is called when an API returns an authentication error (401/400).
+func (r *TokenRepository) InvalidateToken(ctx context.Context, key string) error {
+	if client == nil {
+		return fmt.Errorf("redis client not initialized")
+	}
+	redisKey := fmt.Sprintf("token:%s", key)
+	if err := client.Del(ctx, redisKey).Err(); err != nil {
+		return fmt.Errorf("failed to delete token: %w", err)
+	}
+	logger.Debug("Redis", fmt.Sprintf("Token invalidated for %s", key))
+	return nil
+}

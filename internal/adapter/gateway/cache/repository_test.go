@@ -9,10 +9,12 @@ import (
 
 // mockRedisRepo is a simple mock for testing
 type mockRedisRepo struct {
-	tokens      map[string]string
-	saveErr     error
-	getErr      error
-	isValidFunc func(key string) bool
+	tokens         map[string]string
+	saveErr        error
+	getErr         error
+	isValidFunc    func(key string) bool
+	invalidatedKey string
+	invalidateErr  error
 }
 
 func newMockRedisRepo() *mockRedisRepo {
@@ -45,6 +47,15 @@ func (m *mockRedisRepo) IsTokenValid(ctx context.Context, key string) bool {
 	}
 	_, ok := m.tokens[key]
 	return ok
+}
+
+func (m *mockRedisRepo) InvalidateToken(ctx context.Context, key string) error {
+	if m.invalidateErr != nil {
+		return m.invalidateErr
+	}
+	m.invalidatedKey = key
+	delete(m.tokens, key)
+	return nil
 }
 
 func TestCachedTokenRepository_SaveToken(t *testing.T) {
