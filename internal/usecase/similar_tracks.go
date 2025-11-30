@@ -125,6 +125,8 @@ func (uc *SimilarTracksUseCase) searchSpotifyParallel(ctx context.Context, isrcL
 				URL:         track.URL,
 				Popularity:  track.Popularity,
 				TrackNumber: track.TrackNumber,
+				DurationMs:  track.DurationMs,
+				Explicit:    track.Explicit,
 				Album:       track.Album,
 			}
 
