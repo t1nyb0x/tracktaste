@@ -130,3 +130,26 @@ func (r *CachedTokenRepository) promoteToL1(key string, token string, ttlSeconds
 	r.mu.Unlock()
 	logger.Debug("Cache", "Token promoted to L1 (memory) for "+key)
 }
+
+// InvalidateToken removes a token from both L1 and L2 caches.
+// This is used when an API returns an authentication error (401/400),
+// indicating the cached token is no longer valid.
+func (r *CachedTokenRepository) InvalidateToken(ctx context.Context, key string) error {
+	// Remove from L1 (in-memory)
+	r.mu.Lock()
+	delete(r.memory, key)
+	r.mu.Unlock()
+	logger.Debug("Cache", "Token invalidated from L1 (memory) for "+key)
+
+	// Remove from L2 (Redis) if available
+	if r.redis != nil {
+		if err := r.redis.InvalidateToken(ctx, key); err != nil {
+			logger.Warning("Cache", "Failed to invalidate token from L2 (Redis): "+err.Error())
+			// Don't return error - L1 invalidation is sufficient
+		} else {
+			logger.Debug("Cache", "Token invalidated from L2 (Redis) for "+key)
+		}
+	}
+
+	return nil
+}

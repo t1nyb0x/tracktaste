@@ -19,6 +19,13 @@ const (
 	apiBaseURL    = "https://api.spotify.com/v1"
 )
 
+// isAuthError checks if the status code indicates an authentication error.
+// 401 Unauthorized: token is invalid or expired
+// 400 Bad Request: can occur with malformed tokens ("Only valid bearer authentication supported")
+func isAuthError(statusCode int) bool {
+	return statusCode == http.StatusUnauthorized || statusCode == http.StatusBadRequest
+}
+
 type Gateway struct {
 	clientID  string
 	secret    string
@@ -89,7 +96,22 @@ func (g *Gateway) fetchToken(ctx context.Context) (string, int, error) {
 	return resp.AccessToken, resp.ExpiresIn, nil
 }
 
+// invalidateToken removes the cached token when API returns an auth error.
+func (g *Gateway) invalidateToken(ctx context.Context) {
+	if g.tokenRepo != nil {
+		if err := g.tokenRepo.InvalidateToken(ctx, "spotify"); err != nil {
+			logger.Warning("Spotify", fmt.Sprintf("Failed to invalidate token: %v", err))
+		} else {
+			logger.Info("Spotify", "Token invalidated due to auth error, will fetch new token on next request")
+		}
+	}
+}
+
 func (g *Gateway) GetTrackByID(ctx context.Context, id string) (*domain.Track, error) {
+	return g.getTrackByIDWithRetry(ctx, id, false)
+}
+
+func (g *Gateway) getTrackByIDWithRetry(ctx context.Context, id string, isRetry bool) (*domain.Track, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -107,6 +129,12 @@ func (g *Gateway) GetTrackByID(ctx context.Context, id string) (*domain.Track, e
 	}
 	defer res.Body.Close()
 
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.getTrackByIDWithRetry(ctx, id, true)
+	}
+
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("spotify: status %d", res.StatusCode)
 	}
@@ -120,6 +148,10 @@ func (g *Gateway) GetTrackByID(ctx context.Context, id string) (*domain.Track, e
 }
 
 func (g *Gateway) GetArtistByID(ctx context.Context, id string) (*domain.Artist, error) {
+	return g.getArtistByIDWithRetry(ctx, id, false)
+}
+
+func (g *Gateway) getArtistByIDWithRetry(ctx context.Context, id string, isRetry bool) (*domain.Artist, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -137,6 +169,12 @@ func (g *Gateway) GetArtistByID(ctx context.Context, id string) (*domain.Artist,
 	}
 	defer res.Body.Close()
 
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.getArtistByIDWithRetry(ctx, id, true)
+	}
+
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("spotify: status %d", res.StatusCode)
 	}
@@ -150,6 +188,10 @@ func (g *Gateway) GetArtistByID(ctx context.Context, id string) (*domain.Artist,
 }
 
 func (g *Gateway) GetAlbumByID(ctx context.Context, id string) (*domain.Album, error) {
+	return g.getAlbumByIDWithRetry(ctx, id, false)
+}
+
+func (g *Gateway) getAlbumByIDWithRetry(ctx context.Context, id string, isRetry bool) (*domain.Album, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -167,6 +209,12 @@ func (g *Gateway) GetAlbumByID(ctx context.Context, id string) (*domain.Album, e
 	}
 	defer res.Body.Close()
 
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.getAlbumByIDWithRetry(ctx, id, true)
+	}
+
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("spotify: status %d", res.StatusCode)
 	}
@@ -180,6 +228,10 @@ func (g *Gateway) GetAlbumByID(ctx context.Context, id string) (*domain.Album, e
 }
 
 func (g *Gateway) SearchTracks(ctx context.Context, query string) ([]domain.Track, error) {
+	return g.searchTracksWithRetry(ctx, query, false)
+}
+
+func (g *Gateway) searchTracksWithRetry(ctx context.Context, query string, isRetry bool) ([]domain.Track, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -197,6 +249,12 @@ func (g *Gateway) SearchTracks(ctx context.Context, query string) ([]domain.Trac
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.searchTracksWithRetry(ctx, query, true)
+	}
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("spotify search: status %d", res.StatusCode)
@@ -219,6 +277,10 @@ func (g *Gateway) SearchTracks(ctx context.Context, query string) ([]domain.Trac
 }
 
 func (g *Gateway) SearchByISRC(ctx context.Context, isrc string) (*domain.Track, error) {
+	return g.searchByISRCWithRetry(ctx, isrc, false)
+}
+
+func (g *Gateway) searchByISRCWithRetry(ctx context.Context, isrc string, isRetry bool) (*domain.Track, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -236,6 +298,12 @@ func (g *Gateway) SearchByISRC(ctx context.Context, isrc string) (*domain.Track,
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.searchByISRCWithRetry(ctx, isrc, true)
+	}
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("spotify search: status %d", res.StatusCode)

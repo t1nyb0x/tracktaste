@@ -13,7 +13,8 @@ import (
 
 // mockTokenRepository implements repository.TokenRepository for testing
 type mockTokenRepository struct {
-	tokens map[string]string
+	tokens         map[string]string
+	invalidatedKey string
 }
 
 func newMockTokenRepo() *mockTokenRepository {
@@ -32,6 +33,12 @@ func (m *mockTokenRepository) GetToken(ctx context.Context, key string) (string,
 func (m *mockTokenRepository) IsTokenValid(ctx context.Context, key string) bool {
 	_, ok := m.tokens[key]
 	return ok
+}
+
+func (m *mockTokenRepository) InvalidateToken(ctx context.Context, key string) error {
+	m.invalidatedKey = key
+	delete(m.tokens, key)
+	return nil
 }
 
 var _ repository.TokenRepository = (*mockTokenRepository)(nil)
