@@ -20,6 +20,13 @@ const (
 	territory     = "JP"
 )
 
+// isAuthError checks if the status code indicates an authentication error.
+// 401 Unauthorized: token is invalid or expired
+// 400 Bad Request: can occur with malformed tokens
+func isAuthError(statusCode int) bool {
+	return statusCode == http.StatusUnauthorized || statusCode == http.StatusBadRequest
+}
+
 type Gateway struct {
 	clientID     string
 	clientSecret string
@@ -90,7 +97,22 @@ func (g *Gateway) fetchToken(ctx context.Context) (string, int, error) {
 	return resp.AccessToken, resp.ExpiresIn, nil
 }
 
+// invalidateToken removes the cached token when API returns an auth error.
+func (g *Gateway) invalidateToken(ctx context.Context) {
+	if g.tokenRepo != nil {
+		if err := g.tokenRepo.InvalidateToken(ctx, "kkbox"); err != nil {
+			logger.Warning("KKBOX", fmt.Sprintf("Failed to invalidate token: %v", err))
+		} else {
+			logger.Info("KKBOX", "Token invalidated due to auth error, will fetch new token on next request")
+		}
+	}
+}
+
 func (g *Gateway) SearchByISRC(ctx context.Context, isrc string) (*external.KKBOXTrackInfo, error) {
+	return g.searchByISRCWithRetry(ctx, isrc, false)
+}
+
+func (g *Gateway) searchByISRCWithRetry(ctx context.Context, isrc string, isRetry bool) (*external.KKBOXTrackInfo, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -110,6 +132,12 @@ func (g *Gateway) SearchByISRC(ctx context.Context, isrc string) (*external.KKBO
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.searchByISRCWithRetry(ctx, isrc, true)
+	}
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("kkbox search: status %d", res.StatusCode)
@@ -137,6 +165,10 @@ func (g *Gateway) SearchByISRC(ctx context.Context, isrc string) (*external.KKBO
 }
 
 func (g *Gateway) GetRecommendedTracks(ctx context.Context, trackID string) ([]external.KKBOXTrackInfo, error) {
+	return g.getRecommendedTracksWithRetry(ctx, trackID, false)
+}
+
+func (g *Gateway) getRecommendedTracksWithRetry(ctx context.Context, trackID string, isRetry bool) ([]external.KKBOXTrackInfo, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -154,6 +186,12 @@ func (g *Gateway) GetRecommendedTracks(ctx context.Context, trackID string) ([]e
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.getRecommendedTracksWithRetry(ctx, trackID, true)
+	}
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("kkbox recommend: status %d", res.StatusCode)
@@ -180,6 +218,10 @@ func (g *Gateway) GetRecommendedTracks(ctx context.Context, trackID string) ([]e
 }
 
 func (g *Gateway) GetTrackDetail(ctx context.Context, trackID string) (*external.KKBOXTrackInfo, error) {
+	return g.getTrackDetailWithRetry(ctx, trackID, false)
+}
+
+func (g *Gateway) getTrackDetailWithRetry(ctx context.Context, trackID string, isRetry bool) (*external.KKBOXTrackInfo, error) {
 	token, err := g.getToken(ctx)
 	if err != nil {
 		return nil, err
@@ -197,6 +239,12 @@ func (g *Gateway) GetTrackDetail(ctx context.Context, trackID string) (*external
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// Retry once with fresh token if auth error
+	if isAuthError(res.StatusCode) && !isRetry {
+		g.invalidateToken(ctx)
+		return g.getTrackDetailWithRetry(ctx, trackID, true)
+	}
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("kkbox detail: status %d", res.StatusCode)

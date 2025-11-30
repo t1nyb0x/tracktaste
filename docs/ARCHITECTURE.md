@@ -41,8 +41,10 @@ tracktaste/
     │   │   │   └── types.go        # Spotify API レスポンス型
     │   │   ├── kkbox/
     │   │   │   └── gateway.go      # KKBOXAPI 実装
+    │   │   ├── cache/
+    │   │   │   └── repository.go   # 2層キャッシュ TokenRepository 実装
     │   │   └── redis/
-    │   │       └── repository.go   # TokenRepository 実装
+    │   │       └── repository.go   # Redis TokenRepository 実装
     │   ├── handler/                # Primary Adapters（HTTP Handler）
     │   │   ├── track.go            # トラック関連ハンドラー
     │   │   ├── artist.go           # アーティスト関連ハンドラー
@@ -157,6 +159,7 @@ HTTP Request
 │ 3. Gateway (adapter/gateway/spotify/gateway.go)                             │
 │    - TokenRepository で認証トークン取得                                      │
 │    - Spotify Web API 呼び出し                                               │
+│    - 認証エラー時は自動でトークン再取得してリトライ                           │
 │    - レスポンスを domain.Track に変換                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
      │

@@ -82,9 +82,10 @@ func (m *MockKKBOXAPI) GetTrackDetail(ctx context.Context, trackID string) (*ext
 
 // MockTokenRepository is a mock implementation of repository.TokenRepository.
 type MockTokenRepository struct {
-	SaveTokenFunc    func(ctx context.Context, key string, token string, ttlSeconds int) error
-	GetTokenFunc     func(ctx context.Context, key string) (string, error)
-	IsTokenValidFunc func(ctx context.Context, key string) bool
+	SaveTokenFunc       func(ctx context.Context, key string, token string, ttlSeconds int) error
+	GetTokenFunc        func(ctx context.Context, key string) (string, error)
+	IsTokenValidFunc    func(ctx context.Context, key string) bool
+	InvalidateTokenFunc func(ctx context.Context, key string) error
 }
 
 func (m *MockTokenRepository) SaveToken(ctx context.Context, key string, token string, ttlSeconds int) error {
@@ -106,6 +107,13 @@ func (m *MockTokenRepository) IsTokenValid(ctx context.Context, key string) bool
 		return m.IsTokenValidFunc(ctx, key)
 	}
 	return false
+}
+
+func (m *MockTokenRepository) InvalidateToken(ctx context.Context, key string) error {
+	if m.InvalidateTokenFunc != nil {
+		return m.InvalidateTokenFunc(ctx, key)
+	}
+	return nil
 }
 
 // Helper functions for creating test data
