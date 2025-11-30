@@ -306,3 +306,73 @@ func (g *Gateway) convertArtist(raw *rawArtistResponse) *domain.MBArtist {
 
 	return artist
 }
+
+// rawBrowseRecordingsResponse represents the response from browse recordings.
+type rawBrowseRecordingsResponse struct {
+	RecordingCount int            `json:"recording-count"`
+	RecordingOffset int           `json:"recording-offset"`
+	Recordings     []rawRecording `json:"recordings"`
+}
+
+// GetArtistRecordings retrieves recordings by an artist (same artist's other tracks).
+func (g *Gateway) GetArtistRecordings(ctx context.Context, artistMBID string, limit int) ([]domain.MBRecording, error) {
+	if artistMBID == "" {
+		return nil, fmt.Errorf("musicbrainz: artist MBID is required")
+	}
+
+	if limit <= 0 {
+		limit = 25 // MusicBrainz default
+	}
+	if limit > 100 {
+		limit = 100 // MusicBrainz max
+	}
+
+	// Wait for rate limiter
+	if err := g.limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("musicbrainz: rate limiter error: %w", err)
+	}
+
+	// Browse recordings by artist, include ISRCs
+	endpoint := fmt.Sprintf("%s/recording?artist=%s&inc=isrcs+tags&limit=%d&fmt=json",
+		apiBaseURL, artistMBID, limit)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("musicbrainz: failed to create request: %w", err)
+	}
+	req.Header.Set("User-Agent", g.userAgent)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := g.httpc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("musicbrainz: request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, domain.ErrNotFound
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("musicbrainz: unexpected status %d", resp.StatusCode)
+	}
+
+	var raw rawBrowseRecordingsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("musicbrainz: failed to decode response: %w", err)
+	}
+
+	result := make([]domain.MBRecording, 0, len(raw.Recordings))
+	for _, rec := range raw.Recordings {
+		isrc := ""
+		if len(rec.ISRCs) > 0 {
+			isrc = rec.ISRCs[0]
+		}
+		converted := g.convertRecording(&rec, isrc)
+		converted.ArtistMBID = artistMBID // Set artist MBID since we know it
+		result = append(result, *converted)
+	}
+
+	logger.Debug("MusicBrainz", fmt.Sprintf("Got %d recordings for artist %s", len(result), artistMBID))
+	return result, nil
+}

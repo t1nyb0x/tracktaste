@@ -68,6 +68,11 @@ func (m *mockMusicBrainzAPI) GetRecordingsByISRCBatch(ctx context.Context, isrcs
 	return result, nil
 }
 
+func (m *mockMusicBrainzAPI) GetArtistRecordings(ctx context.Context, artistMBID string, limit int) ([]domain.MBRecording, error) {
+	// Return empty list for mock
+	return []domain.MBRecording{}, nil
+}
+
 type mockSpotifyAPIV2 struct {
 	tracks       map[string]*domain.Track  // by track ID
 	tracksByISRC map[string]*domain.Track  // by ISRC

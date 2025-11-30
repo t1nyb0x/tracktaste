@@ -17,12 +17,14 @@ const (
 
 // genreGroups maps genre groups to their associated Spotify genres.
 var genreGroups = map[GenreGroup][]string{
-	// オタク系
+	// オタク系（アニソン、ボカロ、ゲーム音楽など）
 	GenreGroupOtaku: {
 		"anime",
+		"anime score",
+		"anime rock",
+		"anison",
 		"japanese vgm",
 		"otacore",
-		"anime rock",
 		"japanese vocaloid",
 		"vocaloid",
 		"japanese electropop",
@@ -30,6 +32,9 @@ var genreGroups = map[GenreGroup][]string{
 		"touhou",
 		"doujin",
 		"j-pixie",
+		"game soundtrack",
+		"video game music",
+		"japanese soundtrack",
 	},
 
 	// J-POP系
@@ -41,6 +46,7 @@ var genreGroups = map[GenreGroup][]string{
 		"shibuya-kei",
 		"japanese r&b",
 		"japanese soul",
+		"japanese adult contemporary",
 	},
 
 	// ロック系
@@ -52,6 +58,8 @@ var genreGroups = map[GenreGroup][]string{
 		"japanese metal",
 		"japanese punk",
 		"japanese indie rock",
+		"japanese emo",
+		"japanese hardcore",
 	},
 
 	// K-POP系
@@ -61,6 +69,7 @@ var genreGroups = map[GenreGroup][]string{
 		"k-pop boy group",
 		"k-pop girl group",
 		"korean r&b",
+		"k-indie",
 	},
 
 	// アイドル系
@@ -69,6 +78,7 @@ var genreGroups = map[GenreGroup][]string{
 		"japanese idol pop",
 		"johnnys",
 		"akb-group",
+		"idol",
 	},
 }
 
@@ -76,11 +86,12 @@ var genreGroups = map[GenreGroup][]string{
 var genreToGroup map[string]GenreGroup
 
 // relatedGroups defines which genre groups are considered related.
+// More restrictive: only closely related genres get bonus.
 var relatedGroups = map[GenreGroup][]GenreGroup{
-	GenreGroupOtaku: {GenreGroupJPop, GenreGroupRock},
-	GenreGroupJPop:  {GenreGroupOtaku, GenreGroupRock, GenreGroupIdol},
-	GenreGroupRock:  {GenreGroupJPop, GenreGroupOtaku},
-	GenreGroupKPop:  {GenreGroupIdol},
+	GenreGroupOtaku: {GenreGroupRock},          // Anime rock is common; J-POP/K-POP are NOT related
+	GenreGroupJPop:  {GenreGroupIdol},          // J-POP and Idol overlap
+	GenreGroupRock:  {GenreGroupOtaku},         // Rock and anime rock overlap
+	GenreGroupKPop:  {GenreGroupIdol},          // K-POP and Idol overlap
 	GenreGroupIdol:  {GenreGroupJPop, GenreGroupKPop},
 }
 
@@ -103,10 +114,10 @@ func NewGenreMatcher() *GenreMatcher {
 
 // CalculateBonus calculates the genre bonus based on seed and candidate genres.
 // Returns:
-// - 1.5 for exact genre match
-// - 1.3 for same genre group
-// - 1.0 for related genre groups
-// - 0.5 for unrelated genres (penalty)
+// - 2.0 for exact genre match (strong boost)
+// - 1.5 for same genre group
+// - 1.0 for related genre groups (neutral)
+// - 0.3 for unrelated genres (strong penalty)
 func (m *GenreMatcher) CalculateBonus(seedGenres, candidateGenres []string) float64 {
 	if len(seedGenres) == 0 || len(candidateGenres) == 0 {
 		return 1.0 // No penalty if genres are unknown
@@ -114,7 +125,7 @@ func (m *GenreMatcher) CalculateBonus(seedGenres, candidateGenres []string) floa
 
 	// Check for exact match
 	if hasExactMatch(seedGenres, candidateGenres) {
-		return 1.5
+		return 2.0
 	}
 
 	seedGroup := getGenreGroup(seedGenres)
@@ -127,7 +138,7 @@ func (m *GenreMatcher) CalculateBonus(seedGenres, candidateGenres []string) floa
 
 	// Same genre group
 	if seedGroup == candidateGroup {
-		return 1.3
+		return 1.5
 	}
 
 	// Related genre groups
@@ -135,8 +146,8 @@ func (m *GenreMatcher) CalculateBonus(seedGenres, candidateGenres []string) floa
 		return 1.0
 	}
 
-	// Unrelated genres - penalty
-	return 0.5
+	// Unrelated genres - strong penalty
+	return 0.3
 }
 
 // IsGenreMatch checks if the genres match (exact or same group).

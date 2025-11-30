@@ -13,43 +13,49 @@ func TestGenreMatcher_CalculateBonus(t *testing.T) {
 			name:            "exact match",
 			seedGenres:      []string{"anime"},
 			candidateGenres: []string{"anime"},
-			want:            1.5,
+			want:            2.0, // Strong boost for exact match
 		},
 		{
 			name:            "exact match with multiple genres",
 			seedGenres:      []string{"j-pop", "anime"},
 			candidateGenres: []string{"k-pop", "anime"},
-			want:            1.5,
+			want:            2.0, // Strong boost for exact match
 		},
 		{
 			name:            "same group (otaku)",
 			seedGenres:      []string{"anime"},
 			candidateGenres: []string{"japanese vgm"},
-			want:            1.3,
+			want:            1.5, // Same group bonus
 		},
 		{
 			name:            "same group (jpop)",
 			seedGenres:      []string{"j-pop"},
 			candidateGenres: []string{"city pop"},
-			want:            1.3,
+			want:            1.5, // Same group bonus
 		},
 		{
-			name:            "related groups (otaku <-> jpop)",
+			name:            "related groups (otaku <-> rock)",
 			seedGenres:      []string{"anime"},
-			candidateGenres: []string{"j-pop"},
-			want:            1.0,
+			candidateGenres: []string{"j-rock"},
+			want:            1.0, // Related groups = neutral
 		},
 		{
 			name:            "related groups (idol <-> jpop)",
 			seedGenres:      []string{"japanese idol"},
 			candidateGenres: []string{"j-pop"},
-			want:            1.0,
+			want:            1.0, // Related groups = neutral
 		},
 		{
 			name:            "unrelated groups (otaku <-> kpop)",
 			seedGenres:      []string{"anime"},
 			candidateGenres: []string{"k-pop"},
-			want:            0.5,
+			want:            0.3, // Strong penalty for unrelated
+		},
+		{
+			name:            "unrelated groups (otaku <-> jpop)",
+			seedGenres:      []string{"anime"},
+			candidateGenres: []string{"j-pop"},
+			want:            0.3, // J-POP is now unrelated to Otaku
 		},
 		{
 			name:            "empty seed genres",
@@ -73,7 +79,7 @@ func TestGenreMatcher_CalculateBonus(t *testing.T) {
 			name:            "unknown seed vs known candidate",
 			seedGenres:      []string{"unknown-genre"},
 			candidateGenres: []string{"anime"},
-			want:            0.5,
+			want:            0.3, // Strong penalty for mismatch
 		},
 	}
 
