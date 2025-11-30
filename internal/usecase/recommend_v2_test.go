@@ -69,8 +69,9 @@ func (m *mockMusicBrainzAPI) GetRecordingsByISRCBatch(ctx context.Context, isrcs
 }
 
 type mockSpotifyAPIV2 struct {
-	tracks  map[string]*domain.Track
-	artists map[string][]string // artist ID -> genres
+	tracks       map[string]*domain.Track  // by track ID
+	tracksByISRC map[string]*domain.Track  // by ISRC
+	artists      map[string][]string       // artist ID -> genres
 }
 
 func (m *mockSpotifyAPIV2) GetTrackByID(ctx context.Context, id string) (*domain.Track, error) {
@@ -93,6 +94,11 @@ func (m *mockSpotifyAPIV2) SearchTracks(ctx context.Context, query string) ([]do
 }
 
 func (m *mockSpotifyAPIV2) SearchByISRC(ctx context.Context, isrc string) (*domain.Track, error) {
+	if m.tracksByISRC != nil {
+		if track, ok := m.tracksByISRC[isrc]; ok {
+			return track, nil
+		}
+	}
 	return nil, domain.ErrNotFound
 }
 
@@ -150,6 +156,9 @@ func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
 	trackID := "spotify-track-123"
 	artistID := "spotify-artist-123"
 
+	isrc1 := "JPAB00000001"
+	isrc2 := "JPAB00000002"
+
 	spotifyAPI := &mockSpotifyAPIV2{
 		tracks: map[string]*domain.Track{
 			trackID: {
@@ -159,6 +168,36 @@ func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
 				Artists: []domain.Artist{
 					{ID: artistID, Name: "Test Artist"},
 				},
+			},
+		},
+		tracksByISRC: map[string]*domain.Track{
+			isrc1: {
+				ID:   "spotify-rec-1",
+				Name: "Recommended 1",
+				ISRC: &isrc1,
+				Artists: []domain.Artist{
+					{ID: "artist-rec-1", Name: "Rec Artist 1"},
+				},
+				Album: domain.Album{
+					ID:   "album-rec-1",
+					Name: "Rec Album 1",
+					URL:  "https://open.spotify.com/album/album-rec-1",
+				},
+				URL: "https://open.spotify.com/track/spotify-rec-1",
+			},
+			isrc2: {
+				ID:   "spotify-rec-2",
+				Name: "Recommended 2",
+				ISRC: &isrc2,
+				Artists: []domain.Artist{
+					{ID: "artist-rec-2", Name: "Rec Artist 2"},
+				},
+				Album: domain.Album{
+					ID:   "album-rec-2",
+					Name: "Rec Album 2",
+					URL:  "https://open.spotify.com/album/album-rec-2",
+				},
+				URL: "https://open.spotify.com/track/spotify-rec-2",
 			},
 		},
 		artists: map[string][]string{

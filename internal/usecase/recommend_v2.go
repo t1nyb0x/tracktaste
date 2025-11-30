@@ -100,6 +100,10 @@ func (uc *RecommendUseCaseV2) GetRecommendations(
 		}, nil
 	}
 
+	// Step 4: Enrich candidates with Spotify track details (Artist, Album, URL)
+	logger.Info("RecommendV2", "候補のSpotify情報を取得")
+	candidates = uc.enrichCandidatesWithSpotify(ctx, candidates)
+
 	// Step 4: Get features for candidates (Deezer + MusicBrainz)
 	logger.Info("RecommendV2", "候補の特徴量を取得")
 	candidateFeatures, candidateArtistInfos := uc.getCandidateFeatures(ctx, candidates)
@@ -299,6 +303,50 @@ func (uc *RecommendUseCaseV2) collectCandidatesV2(
 	}
 
 	return candidates
+}
+
+// enrichCandidatesWithSpotify fetches full track details from Spotify for each candidate.
+func (uc *RecommendUseCaseV2) enrichCandidatesWithSpotify(
+	ctx context.Context,
+	candidates []domain.Track,
+) []domain.Track {
+	enriched := make([]domain.Track, 0, len(candidates))
+
+	// Use semaphore for concurrency control
+	sem := make(chan struct{}, 10)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for _, candidate := range candidates {
+		wg.Add(1)
+		go func(c domain.Track) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			if c.ISRC == nil || *c.ISRC == "" {
+				return
+			}
+
+			// Search Spotify by ISRC
+			spotifyTrack, err := uc.spotifyAPI.SearchByISRC(ctx, *c.ISRC)
+			if err != nil {
+				logger.Warning("RecommendV2", fmt.Sprintf("Spotify ISRC検索エラー (%s): %s", *c.ISRC, err.Error()))
+				return
+			}
+
+			if spotifyTrack == nil {
+				return
+			}
+
+			mu.Lock()
+			enriched = append(enriched, *spotifyTrack)
+			mu.Unlock()
+		}(candidate)
+	}
+
+	wg.Wait()
+	return enriched
 }
 
 // getCandidateFeatures retrieves features for candidate tracks.
