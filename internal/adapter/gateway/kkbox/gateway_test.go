@@ -177,7 +177,10 @@ func TestGateway_SearchByISRC_ResponseParsing(t *testing.T) {
 				} `json:"tracks"`
 			}
 
-			resp, _ := http.Get(server.URL)
+			resp, err := http.Get(server.URL)
+			if err != nil {
+				t.Fatalf("http.Get failed: %v", err)
+			}
 			defer resp.Body.Close()
 			json.NewDecoder(resp.Body).Decode(&result)
 
@@ -253,7 +256,10 @@ func TestGateway_GetRecommendedTracks_ResponseParsing(t *testing.T) {
 				} `json:"tracks"`
 			}
 
-			resp, _ := http.Get(server.URL)
+			resp, err := http.Get(server.URL)
+			if err != nil {
+				t.Fatalf("http.Get failed: %v", err)
+			}
 			defer resp.Body.Close()
 			json.NewDecoder(resp.Body).Decode(&result)
 
@@ -298,7 +304,10 @@ func TestGateway_GetTrackDetail_ResponseParsing(t *testing.T) {
 				ISRC string `json:"isrc"`
 			}
 
-			resp, _ := http.Get(server.URL)
+			resp, err := http.Get(server.URL)
+			if err != nil {
+				t.Fatalf("http.Get failed: %v", err)
+			}
 			defer resp.Body.Close()
 			json.NewDecoder(resp.Body).Decode(&result)
 

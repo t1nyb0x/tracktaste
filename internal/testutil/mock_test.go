@@ -1,12 +1,12 @@
 package testutil
 
 import (
-"context"
-"errors"
-"testing"
+	"context"
+	"errors"
+	"testing"
 
-"github.com/t1nyb0x/tracktaste/internal/domain"
-"github.com/t1nyb0x/tracktaste/internal/port/external"
+	"github.com/t1nyb0x/tracktaste/internal/domain"
+	"github.com/t1nyb0x/tracktaste/internal/port/external"
 )
 
 func TestMockSpotifyAPI_GetTrackByID(t *testing.T) {
@@ -51,7 +51,7 @@ func TestMockSpotifyAPI_GetTrackByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-mock := tt.setupMock()
+			mock := tt.setupMock()
 			track, err := mock.GetTrackByID(context.Background(), "track123")
 
 			if tt.expectedErr {
@@ -253,8 +253,8 @@ func TestMockKKBOXAPI_GetTrackDetail(t *testing.T) {
 
 func TestMockTokenRepository(t *testing.T) {
 	t.Run("SaveToken", func(t *testing.T) {
-called := false
-mock := &MockTokenRepository{
+		called := false
+		mock := &MockTokenRepository{
 			SaveTokenFunc: func(ctx context.Context, key string, token string, ttlSeconds int) error {
 				called = true
 				return nil
@@ -277,7 +277,7 @@ mock := &MockTokenRepository{
 	})
 
 	t.Run("GetToken", func(t *testing.T) {
-mock := &MockTokenRepository{
+		mock := &MockTokenRepository{
 			GetTokenFunc: func(ctx context.Context, key string) (string, error) {
 				return "stored_token", nil
 			},
@@ -302,7 +302,7 @@ mock := &MockTokenRepository{
 	})
 
 	t.Run("IsTokenValid", func(t *testing.T) {
-mock := &MockTokenRepository{
+		mock := &MockTokenRepository{
 			IsTokenValidFunc: func(ctx context.Context, key string) bool {
 				return true
 			},
