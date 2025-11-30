@@ -97,7 +97,11 @@ func (h *TrackHandler) Search(w http.ResponseWriter, r *http.Request) {
 	for i, t := range tracks {
 		results[i] = convertTrackToResult(&t)
 	}
-	success(w, results)
+	success(w, trackSearchResponse{Items: results})
+}
+
+type trackSearchResponse struct {
+	Items []trackResult `json:"items"`
 }
 
 func (h *TrackHandler) FetchSimilar(w http.ResponseWriter, r *http.Request) {

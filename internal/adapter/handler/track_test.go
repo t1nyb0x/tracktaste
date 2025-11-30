@@ -291,12 +291,16 @@ func TestTrackHandler_Search(t *testing.T) {
 				if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 					t.Fatalf("failed to unmarshal response: %v", err)
 				}
-				result, ok := resp["result"].([]interface{})
+				resultObj, ok := resp["result"].(map[string]interface{})
 				if !ok {
-					t.Fatal("expected result to be array")
+					t.Fatal("expected result to be object")
 				}
-				if len(result) != tt.expectedCount {
-					t.Errorf("expected %d results, got %d", tt.expectedCount, len(result))
+				items, ok := resultObj["items"].([]interface{})
+				if !ok {
+					t.Fatal("expected result.items to be array")
+				}
+				if len(items) != tt.expectedCount {
+					t.Errorf("expected %d results, got %d", tt.expectedCount, len(items))
 				}
 			}
 		})

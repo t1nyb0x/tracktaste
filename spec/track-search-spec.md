@@ -21,46 +21,48 @@ Param example: 米津玄師 Lemon
 ```json
 {
   "status": 200,
-  "result": [
-    {
-      "album": {
+  "result": {
+    "items": [
+      {
+        "album": {
           "url": string,
           "id": string,
           "images": [
-              {
-                  "url": string,
-                  "height": int,
-                  "width": int
-              }
+            {
+              "url": string,
+              "height": int,
+              "width": int
+            }
           ],
           "name": string,
           "release_date": string,
           "artists": [
-              {
-                  "url": string,
-                  "name": string,
-                  "id": string,
-              }
-          ],
-      },
-      "artists": [
-          {
+            {
               "url": string,
-              "id": string,
               "name": string,
+              "id": string
+            }
+          ]
+        },
+        "artists": [
+          {
+            "url": string,
+            "id": string,
+            "name": string
           }
-      ],
-      "disc_number": int,
-      "popularity": int|null,
-      "isrc": string|null,
-      "url": string,
-      "id": string,
-      "name": string,
-      "track_number": int,
-      "duration_ms": int,
-      "explicit": bool
-    }
-  ]
+        ],
+        "disc_number": int,
+        "popularity": int|null,
+        "isrc": string|null,
+        "url": string,
+        "id": string,
+        "name": string,
+        "track_number": int,
+        "duration_ms": int,
+        "explicit": bool
+      }
+    ]
+  }
 }
 ```
 
