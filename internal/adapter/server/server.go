@@ -15,9 +15,10 @@ type Config struct {
 }
 
 type Handlers struct {
-	Track  *handler.TrackHandler
-	Artist *handler.ArtistHandler
-	Album  *handler.AlbumHandler
+	Track     *handler.TrackHandler
+	Artist    *handler.ArtistHandler
+	Album     *handler.AlbumHandler
+	Recommend *handler.RecommendHandler
 }
 
 func New(cfg Config, h Handlers) *http.Server {
@@ -29,6 +30,7 @@ func New(cfg Config, h Handlers) *http.Server {
 		r.Get("/track/fetch", h.Track.FetchByURL)
 		r.Get("/track/search", h.Track.Search)
 		r.Get("/track/similar", h.Track.FetchSimilar)
+		r.Get("/track/recommend", h.Recommend.FetchRecommendations)
 		r.Get("/artist/fetch", h.Artist.FetchByURL)
 		r.Get("/album/fetch", h.Album.FetchByURL)
 	})

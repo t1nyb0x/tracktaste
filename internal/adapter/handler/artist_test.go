@@ -41,6 +41,26 @@ func (m *mockSpotifyAPIForArtist) SearchByISRC(ctx context.Context, isrc string)
 	return nil, nil
 }
 
+func (m *mockSpotifyAPIForArtist) GetAudioFeatures(ctx context.Context, trackID string) (*domain.AudioFeatures, error) {
+	return nil, nil
+}
+
+func (m *mockSpotifyAPIForArtist) GetAudioFeaturesBatch(ctx context.Context, trackIDs []string) ([]domain.AudioFeatures, error) {
+	return nil, nil
+}
+
+func (m *mockSpotifyAPIForArtist) GetRecommendations(ctx context.Context, params external.RecommendationParams) ([]domain.Track, error) {
+	return nil, nil
+}
+
+func (m *mockSpotifyAPIForArtist) GetArtistGenres(ctx context.Context, artistID string) ([]string, error) {
+	return nil, nil
+}
+
+func (m *mockSpotifyAPIForArtist) GetArtistGenresBatch(ctx context.Context, artistIDs []string) (map[string][]string, error) {
+	return nil, nil
+}
+
 var _ external.SpotifyAPI = (*mockSpotifyAPIForArtist)(nil)
 
 func createTestArtist() *domain.Artist {

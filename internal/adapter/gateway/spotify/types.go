@@ -183,3 +183,40 @@ func (r *rawArtist) toDomain() *domain.Artist {
 
 	return artist
 }
+
+// rawAudioFeatures represents Spotify Audio Features API response.
+type rawAudioFeatures struct {
+	ID               string  `json:"id"`
+	Tempo            float64 `json:"tempo"`
+	Energy           float64 `json:"energy"`
+	Danceability     float64 `json:"danceability"`
+	Valence          float64 `json:"valence"`
+	Acousticness     float64 `json:"acousticness"`
+	Instrumentalness float64 `json:"instrumentalness"`
+	Speechiness      float64 `json:"speechiness"`
+	Liveness         float64 `json:"liveness"`
+	Loudness         float64 `json:"loudness"`
+	Key              int     `json:"key"`
+	Mode             int     `json:"mode"`
+	TimeSignature    int     `json:"time_signature"`
+	DurationMs       int     `json:"duration_ms"`
+}
+
+func (r *rawAudioFeatures) toDomain() *domain.AudioFeatures {
+	return &domain.AudioFeatures{
+		TrackID:          r.ID,
+		Tempo:            r.Tempo,
+		Energy:           r.Energy,
+		Danceability:     r.Danceability,
+		Valence:          r.Valence,
+		Acousticness:     r.Acousticness,
+		Instrumentalness: r.Instrumentalness,
+		Speechiness:      r.Speechiness,
+		Liveness:         r.Liveness,
+		Loudness:         r.Loudness,
+		Key:              r.Key,
+		Mode:             r.Mode,
+		TimeSignature:    r.TimeSignature,
+		DurationMs:       r.DurationMs,
+	}
+}
