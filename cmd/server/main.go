@@ -14,7 +14,9 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/cache"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/deezer"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/kkbox"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/musicbrainz"
 	redisGateway "github.com/t1nyb0x/tracktaste/internal/adapter/gateway/redis"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/spotify"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/handler"
@@ -94,12 +96,14 @@ func main() {
 
 	spotifyGW := spotify.NewGateway(cfg.spotifyID, cfg.spotifySecret, tokenRepo)
 	kkboxGW := kkbox.NewGateway(cfg.kkboxID, cfg.kkboxSecret, tokenRepo)
+	deezerGW := deezer.NewGateway()
+	musicbrainzGW := musicbrainz.NewGateway("TrackTaste/1.0 (https://github.com/t1nyb0x/tracktaste)")
 
 	trackUC := usecase.NewTrackUseCase(spotifyGW)
 	artistUC := usecase.NewArtistUseCase(spotifyGW)
 	albumUC := usecase.NewAlbumUseCase(spotifyGW)
 	similarUC := usecase.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
-	recommendUC := usecase.NewRecommendUseCase(spotifyGW, kkboxGW)
+	recommendUC := usecase.NewRecommendUseCaseV2(spotifyGW, kkboxGW, deezerGW, musicbrainzGW)
 
 	trackH := handler.NewTrackHandler(trackUC, similarUC)
 	artistH := handler.NewArtistHandler(artistUC)

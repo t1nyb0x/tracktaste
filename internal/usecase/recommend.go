@@ -86,11 +86,11 @@ func (uc *RecommendUseCase) GetRecommendations(
 
 	if len(candidates) == 0 {
 		return &domain.RecommendResult{
-			SeedTrack:    *track,
-			SeedFeatures: seedFeatures,
-			SeedGenres:   seedGenres,
-			Items:        []domain.RecommendedTrack{},
-			Mode:         mode,
+			SeedTrack:         *track,
+			SeedAudioFeatures: seedFeatures,
+			SeedGenres:        seedGenres,
+			Items:             []domain.RecommendedTrack{},
+			Mode:              mode,
 		}, nil
 	}
 
@@ -173,11 +173,11 @@ func (uc *RecommendUseCase) GetRecommendations(
 	}
 
 	return &domain.RecommendResult{
-		SeedTrack:    *track,
-		SeedFeatures: seedFeatures,
-		SeedGenres:   seedGenres,
-		Items:        recommendedTracks,
-		Mode:         mode,
+		SeedTrack:         *track,
+		SeedAudioFeatures: seedFeatures,
+		SeedGenres:        seedGenres,
+		Items:             recommendedTracks,
+		Mode:              mode,
 	}, nil
 }
 
