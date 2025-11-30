@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/t1nyb0x/tracktaste/compare/v1.2.0...v1.2.1) (2025-11-30)
+
+
+### Bug Fixes
+
+* 検索APIのレスポンスで検索結果をresult.items[]の中に入れるように修正 ([ecfb691](https://github.com/t1nyb0x/tracktaste/commit/ecfb69139c4ae1c329e308e97883b917dd746b82))
+* 検索APIのレスポンスで検索結果をresult.items[]の中に入れるように修正 ([5c4dee7](https://github.com/t1nyb0x/tracktaste/commit/5c4dee7aae7570e00038e7178275bc99d25cd039))
+
 ## [1.2.0](https://github.com/t1nyb0x/tracktaste/compare/v1.1.0...v1.2.0) (2025-11-30)
 
 
