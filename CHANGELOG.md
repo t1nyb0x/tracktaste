@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/t1nyb0x/tracktaste/compare/v1.1.0...v1.2.0) (2025-11-30)
+
+
+### Features
+
+* トラック情報の返却にduration_msを追加 ([0996957](https://github.com/t1nyb0x/tracktaste/commit/09969577c85478748b4df38bbfc08fd034617c91))
+* トラック情報の返却にduration_msを追加 ([dbc05db](https://github.com/t1nyb0x/tracktaste/commit/dbc05dbe44ea8364cf4aef2fbab8c333bc10d94f))
+
 ## [1.1.0](https://github.com/t1nyb0x/tracktaste/compare/v1.0.0...v1.1.0) (2025-11-30)
 
 
