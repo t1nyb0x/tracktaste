@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.1](https://github.com/t1nyb0x/tracktaste/compare/v1.3.0...v1.3.1) (2025-11-30)
+
+
+### Bug Fixes
+
+* トークンが古い場合に再取得するように修正 ([2b853f4](https://github.com/t1nyb0x/tracktaste/commit/2b853f4ebd224021ddce879615efff084f73b786))
+* トークンが古い場合に再取得するように修正 ([06badd0](https://github.com/t1nyb0x/tracktaste/commit/06badd0abbfa051c72bdb12700df91bbb5af78dd))
+* トークンが古い場合に再取得するように修正 ([267e25a](https://github.com/t1nyb0x/tracktaste/commit/267e25a9686da76c6d979c863a20b8df6bde5c98))
+
 ## [1.3.0](https://github.com/t1nyb0x/tracktaste/compare/v1.2.1...v1.3.0) (2025-11-30)
 
 
