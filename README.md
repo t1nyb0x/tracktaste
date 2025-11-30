@@ -10,7 +10,7 @@ Spotify と KKBOX を連携した音楽トラック情報取得・類似曲検�
 - **トラック情報取得**: Spotify URL からトラックの詳細情報を取得
 - **トラック検索**: キーワードで Spotify のトラックを検索
 - **類似トラック検索**: Spotify URL を元に KKBOX のレコメンド機能を活用した類似曲を取得
-- **レコメンド**: Audio Features とジャンルに基づくハイブリッドレコメンド
+- **レコメンド V2**: Deezer (BPM/Duration/Gain) + MusicBrainz (Tags/Relations) を活用したハイブリッドレコメンド
 - **アーティスト情報取得**: Spotify URL からアーティストの詳細情報を取得
 - **アルバム情報取得**: Spotify URL からアルバムの詳細情報を取得
 
@@ -19,7 +19,7 @@ Spotify と KKBOX を連携した音楽トラック情報取得・類似曲検�
 - **言語**: Go 1.24
 - **フレームワーク**: [go-chi/chi](https://github.com/go-chi/chi) v5
 - **キャッシュ**: 2 層キャッシュ（L1: インメモリ, L2: Redis）
-- **外部 API**: Spotify Web API, KKBOX Open API
+- **外部 API**: Spotify Web API, KKBOX Open API, Deezer API, MusicBrainz API
 - **アーキテクチャ**: Clean Architecture
 
 ## 必要要件
@@ -143,12 +143,12 @@ GET /healthz
 
 ### トラック
 
-| Method | Endpoint              | パラメータ             | 説明                                   |
-| ------ | --------------------- | ---------------------- | -------------------------------------- |
-| GET    | `/v1/track/fetch`     | `url`                  | Spotify URL からトラック情報を取得     |
-| GET    | `/v1/track/search`    | `q`                    | キーワードでトラックを検索             |
-| GET    | `/v1/track/similar`   | `url`                  | 類似トラックを取得（KKBOX レコメンド） |
-| GET    | `/v1/track/recommend` | `url`, `mode`, `limit` | Audio Features ベースのレコメンド取得  |
+| Method | Endpoint              | パラメータ             | 説明                                        |
+| ------ | --------------------- | ---------------------- | ------------------------------------------- |
+| GET    | `/v1/track/fetch`     | `url`                  | Spotify URL からトラック情報を取得          |
+| GET    | `/v1/track/search`    | `q`                    | キーワードでトラックを検索                  |
+| GET    | `/v1/track/similar`   | `url`                  | 類似トラックを取得（KKBOX レコメンド）      |
+| GET    | `/v1/track/recommend` | `url`, `mode`, `limit` | Deezer + MusicBrainz ベースのレコメンド取得 |
 
 #### `/v1/track/recommend` パラメータ詳細
 
@@ -162,9 +162,18 @@ GET /healthz
 
 | モード     | 説明                                 | 用途                           |
 | ---------- | ------------------------------------ | ------------------------------ |
-| `similar`  | Audio Features の類似度を最優先      | 雰囲気の似た曲を探したい時     |
-| `related`  | アーティスト・ジャンルの関連性を優先 | 同じジャンルの新しい曲を探す時 |
+| `similar`  | BPM/Duration/Gain の類似度を最優先   | テンポや雰囲気の似た曲を探す時 |
+| `related`  | タグ・ジャンルの関連性を優先         | 同じジャンルの新しい曲を探す時 |
 | `balanced` | 両方をバランスよく考慮（デフォルト） | 一般的なレコメンド             |
+
+##### レコメンドエンジン V2 について
+
+従来の Spotify Audio Features (廃止予定) に代わり、以下のデータソースを使用:
+
+- **Deezer API**: BPM、Duration（秒）、Gain（ReplayGain dB）
+- **MusicBrainz API**: タグ（ジャンル、ムード等）、アーティスト関連情報
+
+類似度計算には Jaccard 係数（タグ類似度）と各特徴量の正規化距離を組み合わせています。
 
 ### アーティスト
 
@@ -219,11 +228,10 @@ curl "http://localhost:8080/v1/track/recommend?url=https://open.spotify.com/trac
       "name": "入力楽曲名",
       "artists": [{"id": "...", "name": "アーティスト名", "url": "..."}],
       "audio_features": {
-        "tempo": 128.0,
-        "energy": 0.85,
-        "danceability": 0.72,
-        "valence": 0.65,
-        "acousticness": 0.04
+        "bpm": 128.0,
+        "duration_seconds": 240,
+        "gain": -5.2,
+        "tags": ["j-pop", "anime", "electronic"]
       },
       "genres": ["anime", "j-pop"]
     },
@@ -237,8 +245,13 @@ curl "http://localhost:8080/v1/track/recommend?url=https://open.spotify.com/trac
         "similarity_score": 0.92,
         "genre_bonus": 1.5,
         "final_score": 1.38,
-        "match_reasons": ["tempo", "energy", "same_genre"],
-        "audio_features": {...}
+        "match_reasons": ["bpm", "duration", "same_tags"],
+        "audio_features": {
+          "bpm": 126.0,
+          "duration_seconds": 235,
+          "gain": -4.8,
+          "tags": ["j-pop", "pop", "anime"]
+        }
       }
     ],
     "mode": "balanced"
@@ -263,7 +276,9 @@ tracktaste/
 │   │   │   ├── cache/   # 2層キャッシュ（L1:メモリ, L2:Redis）
 │   │   │   ├── redis/   # Redisクライアント
 │   │   │   ├── spotify/ # Spotify API
-│   │   │   └── kkbox/   # KKBOX API
+│   │   │   ├── kkbox/   # KKBOX API
+│   │   │   ├── deezer/  # Deezer API（BPM/Gain取得）
+│   │   │   └── musicbrainz/ # MusicBrainz API（タグ/関連情報）
 │   │   ├── handler/     # HTTPハンドラー
 │   │   └── server/      # サーバー設定
 │   ├── config/          # 設定
