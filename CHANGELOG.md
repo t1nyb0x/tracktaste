@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/t1nyb0x/tracktaste/compare/v1.2.1...v1.3.0) (2025-11-30)
+
+
+### Features
+
+* 類似トラック取得にexplicitとduration_msを追加 ([ea79791](https://github.com/t1nyb0x/tracktaste/commit/ea79791424ebab0424fdc151806aa1789f317b5e))
+* 類似トラック取得にexplicitとduration_msを追加 ([2574308](https://github.com/t1nyb0x/tracktaste/commit/25743089f4320e8395091d7a1cf20d7a8e5fd1d2))
+
 ## [1.2.1](https://github.com/t1nyb0x/tracktaste/compare/v1.2.0...v1.2.1) (2025-11-30)
 
 
