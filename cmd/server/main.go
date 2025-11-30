@@ -99,14 +99,16 @@ func main() {
 	artistUC := usecase.NewArtistUseCase(spotifyGW)
 	albumUC := usecase.NewAlbumUseCase(spotifyGW)
 	similarUC := usecase.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
+	recommendUC := usecase.NewRecommendUseCase(spotifyGW, kkboxGW)
 
 	trackH := handler.NewTrackHandler(trackUC, similarUC)
 	artistH := handler.NewArtistHandler(artistUC)
 	albumH := handler.NewAlbumHandler(albumUC)
+	recommendH := handler.NewRecommendHandler(recommendUC)
 
 	srv := server.New(
 		server.Config{Addr: cfg.httpAddr},
-		server.Handlers{Track: trackH, Artist: artistH, Album: albumH},
+		server.Handlers{Track: trackH, Artist: artistH, Album: albumH, Recommend: recommendH},
 	)
 
 	logger.Info("Main", fmt.Sprintf("Server starting on %s", cfg.httpAddr))

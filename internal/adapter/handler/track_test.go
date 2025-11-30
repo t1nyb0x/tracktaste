@@ -16,11 +16,16 @@ import (
 
 // mockSpotifyAPI for handler tests
 type mockSpotifyAPI struct {
-	GetTrackByIDFunc  func(ctx context.Context, id string) (*domain.Track, error)
-	SearchTracksFunc  func(ctx context.Context, query string) ([]domain.Track, error)
-	SearchByISRCFunc  func(ctx context.Context, isrc string) (*domain.Track, error)
-	GetArtistByIDFunc func(ctx context.Context, id string) (*domain.Artist, error)
-	GetAlbumByIDFunc  func(ctx context.Context, id string) (*domain.Album, error)
+	GetTrackByIDFunc          func(ctx context.Context, id string) (*domain.Track, error)
+	SearchTracksFunc          func(ctx context.Context, query string) ([]domain.Track, error)
+	SearchByISRCFunc          func(ctx context.Context, isrc string) (*domain.Track, error)
+	GetArtistByIDFunc         func(ctx context.Context, id string) (*domain.Artist, error)
+	GetAlbumByIDFunc          func(ctx context.Context, id string) (*domain.Album, error)
+	GetAudioFeaturesFunc      func(ctx context.Context, trackID string) (*domain.AudioFeatures, error)
+	GetAudioFeaturesBatchFunc func(ctx context.Context, trackIDs []string) ([]domain.AudioFeatures, error)
+	GetRecommendationsFunc    func(ctx context.Context, params external.RecommendationParams) ([]domain.Track, error)
+	GetArtistGenresFunc       func(ctx context.Context, artistID string) ([]string, error)
+	GetArtistGenresBatchFunc  func(ctx context.Context, artistIDs []string) (map[string][]string, error)
 }
 
 func (m *mockSpotifyAPI) GetTrackByID(ctx context.Context, id string) (*domain.Track, error) {
@@ -54,6 +59,41 @@ func (m *mockSpotifyAPI) GetAlbumByID(ctx context.Context, id string) (*domain.A
 func (m *mockSpotifyAPI) SearchByISRC(ctx context.Context, isrc string) (*domain.Track, error) {
 	if m.SearchByISRCFunc != nil {
 		return m.SearchByISRCFunc(ctx, isrc)
+	}
+	return nil, nil
+}
+
+func (m *mockSpotifyAPI) GetAudioFeatures(ctx context.Context, trackID string) (*domain.AudioFeatures, error) {
+	if m.GetAudioFeaturesFunc != nil {
+		return m.GetAudioFeaturesFunc(ctx, trackID)
+	}
+	return nil, nil
+}
+
+func (m *mockSpotifyAPI) GetAudioFeaturesBatch(ctx context.Context, trackIDs []string) ([]domain.AudioFeatures, error) {
+	if m.GetAudioFeaturesBatchFunc != nil {
+		return m.GetAudioFeaturesBatchFunc(ctx, trackIDs)
+	}
+	return nil, nil
+}
+
+func (m *mockSpotifyAPI) GetRecommendations(ctx context.Context, params external.RecommendationParams) ([]domain.Track, error) {
+	if m.GetRecommendationsFunc != nil {
+		return m.GetRecommendationsFunc(ctx, params)
+	}
+	return nil, nil
+}
+
+func (m *mockSpotifyAPI) GetArtistGenres(ctx context.Context, artistID string) ([]string, error) {
+	if m.GetArtistGenresFunc != nil {
+		return m.GetArtistGenresFunc(ctx, artistID)
+	}
+	return nil, nil
+}
+
+func (m *mockSpotifyAPI) GetArtistGenresBatch(ctx context.Context, artistIDs []string) (map[string][]string, error) {
+	if m.GetArtistGenresBatchFunc != nil {
+		return m.GetArtistGenresBatchFunc(ctx, artistIDs)
 	}
 	return nil, nil
 }
