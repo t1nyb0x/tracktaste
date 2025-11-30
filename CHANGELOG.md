@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/t1nyb0x/tracktaste/compare/v1.3.1...v1.4.0) (2025-11-30)
+
+
+### Features
+
+* レコメンドエンジン実装 ([ac0d067](https://github.com/t1nyb0x/tracktaste/commit/ac0d0674af9a750eecc0ec7b92bc3182156bd67b))
+
 ## [1.3.1](https://github.com/t1nyb0x/tracktaste/compare/v1.3.0...v1.3.1) (2025-11-30)
 
 
