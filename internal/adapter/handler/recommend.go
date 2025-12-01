@@ -25,7 +25,7 @@ func NewRecommendHandler(recommendUC RecommendUseCase) *RecommendHandler {
 	return &RecommendHandler{recommendUC: recommendUC}
 }
 
-// FetchRecommendations handles GET /v1/track/recommend.
+// FetchRecommendations handles GET /v2/track/recommend.
 func (h *RecommendHandler) FetchRecommendations(w http.ResponseWriter, r *http.Request) {
 	logger.Info("Recommend", "リクエスト開始")
 

@@ -16,7 +16,11 @@
     - [アーティスト情報取得 API](#アーティスト情報取得-api)
     - [アルバム情報取得 API](#アルバム情報取得-api)
     - [類似トラック取得 API](#類似トラック取得-api)
+    - [レコメンド V2 API](#レコメンド-v2-api)
   - [API リクエストについて](#api-リクエストについて)
+    - [トークンキャッシュについて](#トークンキャッシュについて)
+      - [キャッシュ動作フロー](#キャッシュ動作フロー)
+      - [自動トークンリフレッシュ](#自動トークンリフレッシュ)
     - [Spotify の BearerToken 取得について](#spotify-の-bearertoken-取得について)
       - [レスポンス](#レスポンス)
     - [KKBOX の BearerToken 取得について](#kkbox-の-bearertoken-取得について)
@@ -44,6 +48,8 @@ TrackTaste は SpotifyURL から各種情報を取得する Go 製 API です。
 トラック検索: GET /v1/track/search?q={query}
 
 類似トラック取得: GET /v1/track/similar?url={url}
+
+レコメンド V2: GET /v2/track/recommend?url={url}&mode={mode}&limit={limit}
 
 アーティスト情報取得: GET /v1/artist/fetch?url={url}
 
@@ -89,6 +95,7 @@ internal/adapter/handler/extract.go を使用して Spotify の URL から ID �
 - アーティスト情報取得 API
 - アルバム情報取得 API
 - 類似トラック取得 API
+- レコメンド V2 API
 
 ### トラック情報取得 API
 
@@ -113,6 +120,17 @@ Spotify の検索 API を使用してキーワードでトラックを検索し�
 ### 類似トラック取得 API
 
 [仕様書](./track-similar-spec.md)を参照
+
+### レコメンド V2 API
+
+[仕様書](./recommend-engine-spec-v2.md)を参照
+
+Deezer + MusicBrainz の特徴量を使用した高精度レコメンドエンジン。
+
+- エンドポイント: `GET /v2/track/recommend?url={url}&mode={mode}&limit={limit}`
+- 候補ソース: KKBOX, Last.fm, MusicBrainz, YouTube Music（並列収集）
+- 特徴量: BPM, Duration, Gain (Deezer) + Tags, Relations (MusicBrainz)
+- モード: `similar` (音響重視), `related` (タグ重視), `balanced` (バランス)
 
 ## API リクエストについて
 
