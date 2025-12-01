@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.0.0](https://github.com/t1nyb0x/tracktaste/compare/v1.4.0...v2.0.0) (2025-12-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* レコメンドのエンドポイントをv2に変更
+
+### Features
+
+* Deezer, MusicBrainzから楽曲の傾向情報を取得するレコメンドエンジンを追加 ([64b3d70](https://github.com/t1nyb0x/tracktaste/commit/64b3d7025bf8144efd427149d1faf1a69778d58c))
+* last.fm, Youtube musicから情報を取得する処理を追加 ([2b17df6](https://github.com/t1nyb0x/tracktaste/commit/2b17df6bf24ea15a3a54d25974e25748d8a2c603))
+* レコメンドのエンドポイントをv2に変更 ([759499e](https://github.com/t1nyb0x/tracktaste/commit/759499ea5e23ba80d6529d0d20e6b2990dcb10fe))
+
+
+### Bug Fixes
+
+* Lintエラー解消 ([4a8d29f](https://github.com/t1nyb0x/tracktaste/commit/4a8d29f028c2557cae0a6262a6ad006087116a82))
+* 一部情報が欠落していたのを修正 ([556af79](https://github.com/t1nyb0x/tracktaste/commit/556af7966428da2686cbe8e6652360e346398c08))
+
 ## [1.4.0](https://github.com/t1nyb0x/tracktaste/compare/v1.3.1...v1.4.0) (2025-11-30)
 
 
