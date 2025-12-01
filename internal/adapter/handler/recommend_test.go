@@ -9,7 +9,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 )
 
 // mockSpotifyAPI for recommend handler tests
@@ -134,7 +134,7 @@ func TestRecommendHandler_FetchRecommendations(t *testing.T) {
 	}{
 		{
 			name: "successful recommendation",
-			url:  "/v1/track/recommend?url=https://open.spotify.com/track/abc123&mode=balanced&limit=10",
+			url:  "/v2/track/recommend?url=https://open.spotify.com/track/abc123&mode=balanced&limit=10",
 			setupMock: func(spotify *mockRecommendSpotifyAPI, kkbox *mockRecommendKKBOXAPI) {
 				spotify.getTrackByIDFunc = func(ctx context.Context, id string) (*domain.Track, error) {
 					return &domain.Track{
@@ -195,13 +195,13 @@ func TestRecommendHandler_FetchRecommendations(t *testing.T) {
 		},
 		{
 			name:           "missing url parameter",
-			url:            "/v1/track/recommend",
+			url:            "/v2/track/recommend",
 			setupMock:      func(spotify *mockRecommendSpotifyAPI, kkbox *mockRecommendKKBOXAPI) {},
 			wantStatusCode: http.StatusBadRequest,
 		},
 		{
 			name:           "invalid url format",
-			url:            "/v1/track/recommend?url=not-a-spotify-url",
+			url:            "/v2/track/recommend?url=not-a-spotify-url",
 			setupMock:      func(spotify *mockRecommendSpotifyAPI, kkbox *mockRecommendKKBOXAPI) {},
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -213,7 +213,7 @@ func TestRecommendHandler_FetchRecommendations(t *testing.T) {
 			kkboxMock := &mockRecommendKKBOXAPI{}
 			tt.setupMock(spotifyMock, kkboxMock)
 
-			uc := usecase.NewRecommendUseCase(spotifyMock, kkboxMock)
+			uc := usecasev1.NewRecommendUseCase(spotifyMock, kkboxMock)
 			h := NewRecommendHandler(uc)
 
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)

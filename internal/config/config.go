@@ -14,8 +14,18 @@ type Spotify struct {
 	Secret string
 }
 
+type LastFM struct {
+	APIKey string
+}
+
+type YTMusic struct {
+	SidecarURL string
+}
+
 type Config struct {
 	HTTP    HTTP
 	KKBOX   KKBOX
 	Spotify Spotify
+	LastFM  LastFM
+	YTMusic YTMusic
 }

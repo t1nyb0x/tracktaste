@@ -35,14 +35,18 @@ type RecommendedTrack struct {
 	GenreBonus      float64        `json:"genre_bonus"`
 	FinalScore      float64        `json:"final_score"`
 	MatchReasons    []string       `json:"match_reasons"`
-	AudioFeatures   *AudioFeatures `json:"audio_features,omitempty"`
+	Features        *TrackFeatures `json:"features,omitempty"`
+	// Deprecated: Use Features instead
+	AudioFeatures *AudioFeatures `json:"audio_features,omitempty"`
 }
 
 // RecommendResult represents the result of a recommendation request.
 type RecommendResult struct {
 	SeedTrack    Track              `json:"seed_track"`
-	SeedFeatures *AudioFeatures     `json:"seed_features,omitempty"`
+	SeedFeatures *TrackFeatures     `json:"seed_features,omitempty"`
 	SeedGenres   []string           `json:"seed_genres,omitempty"`
 	Items        []RecommendedTrack `json:"items"`
 	Mode         RecommendMode      `json:"mode"`
+	// Deprecated: Use SeedFeatures instead
+	SeedAudioFeatures *AudioFeatures `json:"seed_audio_features,omitempty"`
 }

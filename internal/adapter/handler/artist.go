@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
 type ArtistHandler struct {
-	artistUC *usecase.ArtistUseCase
+	artistUC *usecasev1.ArtistUseCase
 }
 
-func NewArtistHandler(artistUC *usecase.ArtistUseCase) *ArtistHandler {
+func NewArtistHandler(artistUC *usecasev1.ArtistUseCase) *ArtistHandler {
 	return &ArtistHandler{artistUC: artistUC}
 }
 

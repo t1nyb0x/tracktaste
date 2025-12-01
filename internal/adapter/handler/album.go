@@ -3,15 +3,15 @@ package handler
 import (
 	"net/http"
 
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
 type AlbumHandler struct {
-	albumUC *usecase.AlbumUseCase
+	albumUC *usecasev1.AlbumUseCase
 }
 
-func NewAlbumHandler(albumUC *usecase.AlbumUseCase) *AlbumHandler {
+func NewAlbumHandler(albumUC *usecasev1.AlbumUseCase) *AlbumHandler {
 	return &AlbumHandler{albumUC: albumUC}
 }
 
