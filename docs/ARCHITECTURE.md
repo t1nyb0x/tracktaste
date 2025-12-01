@@ -22,7 +22,7 @@ tracktaste/
 └── internal/
     ├── domain/                      # ドメイン層（最も内側）
     │   ├── track.go                # Track, SimpleTrack, SimilarTrack, TrackFeatures
-    │   ├── artist.go               # Artist, SimpleArtist
+    │   ├── artist.go               # Artist, SimpleArtist, ArtistInfo
     │   ├── album.go                # Album
     │   ├── image.go                # Image
     │   └── errors.go               # ドメインエラー定義
@@ -39,13 +39,19 @@ tracktaste/
     │       └── ytmusic.go          # YouTubeMusicAPI interface
     │
     ├── usecase/                     # ユースケース層（ビジネスロジック）
-    │   ├── track.go                # TrackUseCase
-    │   ├── artist.go               # ArtistUseCase
-    │   ├── album.go                # AlbumUseCase
-    │   ├── similar_tracks.go       # SimilarTracksUseCase
-    │   ├── recommend_v2.go         # RecommendUseCaseV2 (マルチソースレコメンド)
-    │   ├── similarity.go           # SimilarityCalculatorV2
-    │   └── genre_matcher.go        # GenreMatcher
+    │   ├── genre_matcher.go        # GenreMatcher (V1/V2共通)
+    │   │
+    │   ├── v1/                      # V1 ユースケース
+    │   │   ├── track.go            # TrackUseCase
+    │   │   ├── artist.go           # ArtistUseCase
+    │   │   ├── album.go            # AlbumUseCase
+    │   │   ├── similar_tracks.go   # SimilarTracksUseCase
+    │   │   ├── recommend.go        # RecommendUseCase (Spotify Audio Features)
+    │   │   └── similarity.go       # SimilarityCalculator
+    │   │
+    │   └── v2/                      # V2 ユースケース
+    │       ├── recommend.go        # RecommendUseCase (マルチソースレコメンド)
+    │       └── similarity.go       # SimilarityCalculatorV2
     │
     ├── adapter/                     # アダプター層（最も外側）
     │   ├── gateway/                # Secondary Adapters（外部API実装）
@@ -70,6 +76,7 @@ tracktaste/
     │   │   ├── track.go            # トラック関連ハンドラー
     │   │   ├── artist.go           # アーティスト関連ハンドラー
     │   │   ├── album.go            # アルバム関連ハンドラー
+    │   │   ├── recommend.go        # レコメンドハンドラー (V2)
     │   │   ├── response.go         # レスポンスヘルパー
     │   │   └── extract.go          # URL抽出ユーティリティ
     │   └── server/
@@ -210,7 +217,7 @@ HTTP Request
      │
      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 2. SimilarTracksUseCase (usecase/similar_tracks.go)                         │
+│ 2. SimilarTracksUseCase (usecase/v1/similar_tracks.go)                      │
 │    ├── SpotifyAPI.GetTrackByID() → ISRC取得                                  │
 │    ├── KKBOXAPI.SearchByISRC() → KKBOXトラックID取得                         │
 │    ├── KKBOXAPI.GetRecommendedTracks() → レコメンド取得                      │
@@ -223,24 +230,68 @@ HTTP Request
 HTTP Response (JSON)
 ```
 
+## データフロー例: GET /v2/track/recommend
+
+```
+HTTP Request
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. Handler (adapter/handler/recommend.go)                                   │
+│    - URLからSpotify Track IDを抽出                                           │
+│    - mode, limit パラメータ解析                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. RecommendUseCase (usecase/v2/recommend.go)                               │
+│    ├── SpotifyAPI.GetTrackByID() → シードトラック情報取得                    │
+│    ├── DeezerAPI.GetTrackByISRC() + MusicBrainzAPI → シード特徴量取得        │
+│    ├── 並列候補収集:                                                         │
+│    │   ├── KKBOXAPI.GetRecommendedTracks()  (30件)                          │
+│    │   ├── LastFMAPI.GetSimilarTracks()     (30件) [optional]               │
+│    │   ├── MusicBrainzAPI.GetArtistRecordings() (20件)                      │
+│    │   └── YouTubeMusicAPI.Search()         (25件) [optional, sidecar]      │
+│    ├── 重複除去（ISRC/name+artist）                                          │
+│    ├── 候補の特徴量並列取得（Deezer/MusicBrainz）                            │
+│    ├── ジャンルフィルタリング（アニソン保護等）                               │
+│    ├── SimilarityCalculatorV2 で類似度計算                                   │
+│    │   └── BPM, Duration, Gain, TagSimilarity + アーティスト関係ボーナス     │
+│    └── スコア順ソート、上限適用                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+     │
+     ▼
+HTTP Response (JSON)
+```
+
 ## 依存性注入 (DI)
 
 `cmd/server/main.go` で全ての依存関係を組み立てます：
 
 ```go
 // 1. Infrastructure
-tokenRepo := redis.NewTokenRepository()
+tokenRepo := cache.NewCachedTokenRepository(redisRepo)
 
 // 2. Gateways (port interface を実装)
 spotifyGW := spotify.NewGateway(clientID, secret, tokenRepo)
 kkboxGW := kkbox.NewGateway(clientID, secret, tokenRepo)
+deezerGW := deezer.NewGateway()
+musicbrainzGW := musicbrainz.NewGateway(userAgent)
+lastfmGW := lastfm.NewGateway(apiKey)        // optional
+ytmusicGW := ytmusic.NewGateway(sidecarURL)  // optional
 
 // 3. UseCases (port interface に依存)
-trackUC := usecase.NewTrackUseCase(spotifyGW)     // SpotifyAPI interface
-similarUC := usecase.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
+trackUC := usecasev1.NewTrackUseCase(spotifyGW)
+artistUC := usecasev1.NewArtistUseCase(spotifyGW)
+albumUC := usecasev1.NewAlbumUseCase(spotifyGW)
+similarUC := usecasev1.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
+recommendUC := usecasev2.NewRecommendUseCaseFull(
+    spotifyGW, kkboxGW, deezerGW, musicbrainzGW, lastfmGW, ytmusicGW,
+)
 
 // 4. Handlers (usecase に依存)
 trackHandler := handler.NewTrackHandler(trackUC, similarUC)
+recommendHandler := handler.NewRecommendHandler(recommendUC)
 
 // 5. Server
 server.New(config, handlers)
@@ -289,11 +340,12 @@ go run ./cmd/server/...
 
 ## API エンドポイント
 
-| Method | Path              | Handler                   |
-| ------ | ----------------- | ------------------------- |
-| GET    | /healthz          | Health check              |
-| GET    | /v1/track/fetch   | TrackHandler.FetchByURL   |
-| GET    | /v1/track/search  | TrackHandler.Search       |
-| GET    | /v1/track/similar | TrackHandler.FetchSimilar |
-| GET    | /v1/artist/fetch  | ArtistHandler.FetchByURL  |
-| GET    | /v1/album/fetch   | AlbumHandler.FetchByURL   |
+| Method | Path                | Handler                               |
+| ------ | ------------------- | ------------------------------------- |
+| GET    | /healthz            | Health check                          |
+| GET    | /v1/track/fetch     | TrackHandler.FetchByURL               |
+| GET    | /v1/track/search    | TrackHandler.Search                   |
+| GET    | /v1/track/similar   | TrackHandler.FetchSimilar             |
+| GET    | /v2/track/recommend | RecommendHandler.FetchRecommendations |
+| GET    | /v1/artist/fetch    | ArtistHandler.FetchByURL              |
+| GET    | /v1/album/fetch     | AlbumHandler.FetchByURL               |

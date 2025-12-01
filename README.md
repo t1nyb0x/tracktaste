@@ -130,7 +130,8 @@ go test ./... -cover
 go test ./... -v
 
 # 特定パッケージのみ
-go test ./internal/usecase/...
+go test ./internal/usecase/v1/...  # V1ユースケース
+go test ./internal/usecase/v2/...  # V2ユースケース
 ```
 
 ### Lint
