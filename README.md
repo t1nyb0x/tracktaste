@@ -103,11 +103,38 @@ docker compose -f docker-compose.prod.yml up -d
 ### Docker イメージの取得
 
 ```bash
-# 最新版
+# 最新版（メインアプリ）
 docker pull ghcr.io/t1nyb0x/tracktaste:latest
+
+# 最新版（YouTube Music sidecar）
+docker pull ghcr.io/t1nyb0x/tracktaste-ytmusic-sidecar:latest
 
 # 特定バージョン
 docker pull ghcr.io/t1nyb0x/tracktaste:v1.0.0
+docker pull ghcr.io/t1nyb0x/tracktaste-ytmusic-sidecar:v1.0.0
+```
+
+### 別プロジェクトから利用する場合
+
+```yaml
+# compose.yml
+services:
+  tracktaste:
+    image: ghcr.io/t1nyb0x/tracktaste:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - KKBOX_ID=${KKBOX_ID}
+      - KKBOX_SECRET=${KKBOX_SECRET}
+      - LASTFM_API_KEY=${LASTFM_API_KEY}
+      - YTMUSIC_SIDECAR_URL=http://ytmusic-sidecar:8081
+    depends_on:
+      - ytmusic-sidecar
+
+  ytmusic-sidecar:
+    image: ghcr.io/t1nyb0x/tracktaste-ytmusic-sidecar:latest
 ```
 
 ### 手動でビルド
