@@ -14,21 +14,28 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/cache"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/deezer"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/kkbox"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/lastfm"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/musicbrainz"
 	redisGateway "github.com/t1nyb0x/tracktaste/internal/adapter/gateway/redis"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/spotify"
+	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/ytmusic"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/handler"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/server"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
+	usecasev2 "github.com/t1nyb0x/tracktaste/internal/usecase/v2"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
 type config struct {
-	httpAddr      string
-	spotifyID     string
-	spotifySecret string
-	kkboxID       string
-	kkboxSecret   string
+	httpAddr          string
+	spotifyID         string
+	spotifySecret     string
+	kkboxID           string
+	kkboxSecret       string
+	lastfmAPIKey      string
+	ytmusicSidecarURL string
 }
 
 // getProjectRoot はプロジェクトルートのパスを取得します。
@@ -49,11 +56,13 @@ func loadConfig() (*config, error) {
 	}
 
 	cfg := &config{
-		httpAddr:      getEnv("HTTP_ADDR", ":8080"),
-		spotifyID:     os.Getenv("SPOTIFY_CLIENT_ID"),
-		spotifySecret: os.Getenv("SPOTIFY_CLIENT_SECRET"),
-		kkboxID:       os.Getenv("KKBOX_ID"),
-		kkboxSecret:   os.Getenv("KKBOX_SECRET"),
+		httpAddr:          getEnv("HTTP_ADDR", ":8080"),
+		spotifyID:         os.Getenv("SPOTIFY_CLIENT_ID"),
+		spotifySecret:     os.Getenv("SPOTIFY_CLIENT_SECRET"),
+		kkboxID:           os.Getenv("KKBOX_ID"),
+		kkboxSecret:       os.Getenv("KKBOX_SECRET"),
+		lastfmAPIKey:      os.Getenv("LASTFM_API_KEY"),
+		ytmusicSidecarURL: os.Getenv("YTMUSIC_SIDECAR_URL"),
 	}
 
 	if cfg.spotifyID == "" || cfg.spotifySecret == "" {
@@ -94,12 +103,40 @@ func main() {
 
 	spotifyGW := spotify.NewGateway(cfg.spotifyID, cfg.spotifySecret, tokenRepo)
 	kkboxGW := kkbox.NewGateway(cfg.kkboxID, cfg.kkboxSecret, tokenRepo)
+	deezerGW := deezer.NewGateway()
+	musicbrainzGW := musicbrainz.NewGateway("TrackTaste/1.0 (https://github.com/t1nyb0x/tracktaste)")
 
-	trackUC := usecase.NewTrackUseCase(spotifyGW)
-	artistUC := usecase.NewArtistUseCase(spotifyGW)
-	albumUC := usecase.NewAlbumUseCase(spotifyGW)
-	similarUC := usecase.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
-	recommendUC := usecase.NewRecommendUseCase(spotifyGW, kkboxGW)
+	trackUC := usecasev1.NewTrackUseCase(spotifyGW)
+	artistUC := usecasev1.NewArtistUseCase(spotifyGW)
+	albumUC := usecasev1.NewAlbumUseCase(spotifyGW)
+	similarUC := usecasev1.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
+
+	// Create recommend use case with optional APIs
+	var recommendUC *usecasev2.RecommendUseCase
+
+	// Initialize optional gateways
+	var lastfmGW *lastfm.Gateway
+	if cfg.lastfmAPIKey != "" {
+		lastfmGW = lastfm.NewGateway(cfg.lastfmAPIKey)
+		logger.Info("Main", "Last.fm enabled")
+	} else {
+		logger.Warning("Main", "Last.fm API key not set - running without Last.fm")
+	}
+
+	var ytmusicGW *ytmusic.Gateway
+	if cfg.ytmusicSidecarURL != "" {
+		ytmusicGW = ytmusic.NewGateway(cfg.ytmusicSidecarURL)
+		logger.Info("Main", fmt.Sprintf("YouTube Music sidecar enabled: %s", cfg.ytmusicSidecarURL))
+	} else {
+		logger.Warning("Main", "YouTube Music sidecar URL not set - running without YouTube Music")
+	}
+
+	// Create recommend use case with available APIs
+	if lastfmGW != nil || ytmusicGW != nil {
+		recommendUC = usecasev2.NewRecommendUseCaseFull(spotifyGW, kkboxGW, deezerGW, musicbrainzGW, lastfmGW, ytmusicGW)
+	} else {
+		recommendUC = usecasev2.NewRecommendUseCase(spotifyGW, kkboxGW, deezerGW, musicbrainzGW)
+	}
 
 	trackH := handler.NewTrackHandler(trackUC, similarUC)
 	artistH := handler.NewArtistHandler(artistUC)

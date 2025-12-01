@@ -1,5 +1,5 @@
-// Package usecase contains business logic for TrackTaste.
-package usecase
+// Package v1 contains V1 business logic for TrackTaste.
+package v1
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
+	"github.com/t1nyb0x/tracktaste/internal/usecase"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
@@ -20,12 +21,12 @@ const (
 	kkboxCandidateLimit   = 20
 )
 
-// RecommendUseCase handles track recommendation logic.
+// RecommendUseCase handles track recommendation logic using Spotify Audio Features.
 type RecommendUseCase struct {
 	spotifyAPI   external.SpotifyAPI
 	kkboxAPI     external.KKBOXAPI
 	calculator   *SimilarityCalculator
-	genreMatcher *GenreMatcher
+	genreMatcher *usecase.GenreMatcher
 }
 
 // NewRecommendUseCase creates a new RecommendUseCase.
@@ -34,7 +35,7 @@ func NewRecommendUseCase(spotifyAPI external.SpotifyAPI, kkboxAPI external.KKBOX
 		spotifyAPI:   spotifyAPI,
 		kkboxAPI:     kkboxAPI,
 		calculator:   NewSimilarityCalculator(DefaultWeights()),
-		genreMatcher: NewGenreMatcher(),
+		genreMatcher: usecase.NewGenreMatcher(),
 	}
 }
 
@@ -86,11 +87,11 @@ func (uc *RecommendUseCase) GetRecommendations(
 
 	if len(candidates) == 0 {
 		return &domain.RecommendResult{
-			SeedTrack:    *track,
-			SeedFeatures: seedFeatures,
-			SeedGenres:   seedGenres,
-			Items:        []domain.RecommendedTrack{},
-			Mode:         mode,
+			SeedTrack:         *track,
+			SeedAudioFeatures: seedFeatures,
+			SeedGenres:        seedGenres,
+			Items:             []domain.RecommendedTrack{},
+			Mode:              mode,
 		}, nil
 	}
 
@@ -173,11 +174,11 @@ func (uc *RecommendUseCase) GetRecommendations(
 	}
 
 	return &domain.RecommendResult{
-		SeedTrack:    *track,
-		SeedFeatures: seedFeatures,
-		SeedGenres:   seedGenres,
-		Items:        recommendedTracks,
-		Mode:         mode,
+		SeedTrack:         *track,
+		SeedAudioFeatures: seedFeatures,
+		SeedGenres:        seedGenres,
+		Items:             recommendedTracks,
+		Mode:              mode,
 	}, nil
 }
 

@@ -1,4 +1,5 @@
-package usecase
+// Package v1 contains V1 business logic for TrackTaste.
+package v1
 
 import (
 	"context"
@@ -15,11 +16,11 @@ func NewTrackUseCase(spotifyAPI external.SpotifyAPI) *TrackUseCase {
 	return &TrackUseCase{spotifyAPI: spotifyAPI}
 }
 
-func (uc *TrackUseCase) FetchByID(ctx context.Context, id string) (*domain.Track, error) {
-	if id == "" {
+func (uc *TrackUseCase) FetchByID(ctx context.Context, trackID string) (*domain.Track, error) {
+	if trackID == "" {
 		return nil, domain.ErrTrackNotFound
 	}
-	return uc.spotifyAPI.GetTrackByID(ctx, id)
+	return uc.spotifyAPI.GetTrackByID(ctx, trackID)
 }
 
 func (uc *TrackUseCase) Search(ctx context.Context, query string) ([]domain.Track, error) {

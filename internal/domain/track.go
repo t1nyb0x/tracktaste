@@ -52,3 +52,26 @@ type TrackSearchResult struct {
 type SimilarTracksResult struct {
 	Items []SimilarTrack `json:"items"`
 }
+
+// LastFMTrack represents a track from Last.fm API.
+type LastFMTrack struct {
+	Name       string  `json:"name"`
+	Artist     string  `json:"artist"`
+	MBID       string  `json:"mbid,omitempty"`        // MusicBrainz Track ID
+	ArtistMBID string  `json:"artist_mbid,omitempty"` // MusicBrainz Artist ID
+	Match      float64 `json:"match"`                 // Similarity score (0-1)
+	URL        string  `json:"url,omitempty"`
+}
+
+// YTMusicTrack represents a track from YouTube Music via sidecar.
+type YTMusicTrack struct {
+	VideoID         string `json:"video_id"`
+	Title           string `json:"title"`
+	Artist          string `json:"artist"`
+	ArtistID        string `json:"artist_id,omitempty"`
+	Album           string `json:"album,omitempty"`
+	AlbumID         string `json:"album_id,omitempty"`
+	DurationSeconds int    `json:"duration_seconds,omitempty"`
+	ThumbnailURL    string `json:"thumbnail_url,omitempty"`
+	IsExplicit      bool   `json:"is_explicit"`
+}

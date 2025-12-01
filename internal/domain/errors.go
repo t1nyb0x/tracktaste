@@ -27,6 +27,9 @@ var (
 
 	// ErrTimeout indicates that the operation timed out.
 	ErrTimeout = errors.New("operation timed out")
+
+	// ErrNotFound is a generic not found error.
+	ErrNotFound = errors.New("not found")
 )
 
 // ExtractError represents an error during URL extraction.

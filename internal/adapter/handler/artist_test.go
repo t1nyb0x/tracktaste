@@ -10,7 +10,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 )
 
 // mockSpotifyAPIForArtist for artist handler tests
@@ -141,7 +141,7 @@ func TestArtistHandler_FetchByURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAPI := &mockSpotifyAPIForArtist{GetArtistByIDFunc: tt.mockFunc}
-			artistUC := usecase.NewArtistUseCase(mockAPI)
+			artistUC := usecasev1.NewArtistUseCase(mockAPI)
 			handler := NewArtistHandler(artistUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/artist/fetch?url="+tt.url, nil)
@@ -200,7 +200,7 @@ func TestArtistHandler_FetchByURL_NilFollowers(t *testing.T) {
 			}, nil
 		},
 	}
-	artistUC := usecase.NewArtistUseCase(mockAPI)
+	artistUC := usecasev1.NewArtistUseCase(mockAPI)
 	handler := NewArtistHandler(artistUC)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/artist/fetch?url=https://open.spotify.com/artist/abc123", nil)

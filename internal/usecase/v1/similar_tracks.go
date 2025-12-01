@@ -1,4 +1,5 @@
-package usecase
+// Package v1 contains V1 business logic for TrackTaste.
+package v1
 
 import (
 	"context"

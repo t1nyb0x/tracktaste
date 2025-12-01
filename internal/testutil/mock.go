@@ -156,6 +156,26 @@ func (m *MockTokenRepository) InvalidateToken(ctx context.Context, key string) e
 	return nil
 }
 
+// MockYouTubeMusicAPI is a mock implementation of external.YouTubeMusicAPI.
+type MockYouTubeMusicAPI struct {
+	GetSimilarTracksFunc func(ctx context.Context, videoID string, limit int) ([]domain.YTMusicTrack, error)
+	SearchTracksFunc     func(ctx context.Context, query string, limit int) ([]domain.YTMusicTrack, error)
+}
+
+func (m *MockYouTubeMusicAPI) GetSimilarTracks(ctx context.Context, videoID string, limit int) ([]domain.YTMusicTrack, error) {
+	if m.GetSimilarTracksFunc != nil {
+		return m.GetSimilarTracksFunc(ctx, videoID, limit)
+	}
+	return nil, nil
+}
+
+func (m *MockYouTubeMusicAPI) SearchTracks(ctx context.Context, query string, limit int) ([]domain.YTMusicTrack, error) {
+	if m.SearchTracksFunc != nil {
+		return m.SearchTracksFunc(ctx, query, limit)
+	}
+	return nil, nil
+}
+
 // Helper functions for creating test data
 
 // StringPtr returns a pointer to the given string.

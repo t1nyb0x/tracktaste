@@ -1,25 +1,31 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
+// RecommendUseCase defines the interface for recommendation use cases.
+// Both RecommendUseCase and RecommendUseCaseV2 implement this interface.
+type RecommendUseCase interface {
+	GetRecommendations(ctx context.Context, trackID string, mode domain.RecommendMode, limit int) (*domain.RecommendResult, error)
+}
+
 // RecommendHandler handles recommendation requests.
 type RecommendHandler struct {
-	recommendUC *usecase.RecommendUseCase
+	recommendUC RecommendUseCase
 }
 
 // NewRecommendHandler creates a new RecommendHandler.
-func NewRecommendHandler(recommendUC *usecase.RecommendUseCase) *RecommendHandler {
+func NewRecommendHandler(recommendUC RecommendUseCase) *RecommendHandler {
 	return &RecommendHandler{recommendUC: recommendUC}
 }
 
-// FetchRecommendations handles GET /v1/track/recommend.
+// FetchRecommendations handles GET /v2/track/recommend.
 func (h *RecommendHandler) FetchRecommendations(w http.ResponseWriter, r *http.Request) {
 	logger.Info("Recommend", "リクエスト開始")
 
@@ -114,6 +120,11 @@ type audioFeaturesResult struct {
 	Danceability float64 `json:"danceability"`
 	Valence      float64 `json:"valence"`
 	Acousticness float64 `json:"acousticness"`
+	// New fields from TrackFeatures (Deezer + MusicBrainz)
+	BPM             float64  `json:"bpm,omitempty"`
+	DurationSeconds int      `json:"duration_seconds,omitempty"`
+	Gain            float64  `json:"gain,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
 }
 
 func convertRecommendResult(result *domain.RecommendResult) recommendResponse {
@@ -124,13 +135,23 @@ func convertRecommendResult(result *domain.RecommendResult) recommendResponse {
 	}
 
 	var seedFeatures *audioFeaturesResult
-	if result.SeedFeatures != nil {
+	// Support both old AudioFeatures and new TrackFeatures
+	//nolint:staticcheck // backward compatibility
+	if result.SeedAudioFeatures != nil {
+		//nolint:staticcheck // backward compatibility
 		seedFeatures = &audioFeaturesResult{
-			Tempo:        result.SeedFeatures.Tempo,
-			Energy:       result.SeedFeatures.Energy,
-			Danceability: result.SeedFeatures.Danceability,
-			Valence:      result.SeedFeatures.Valence,
-			Acousticness: result.SeedFeatures.Acousticness,
+			Tempo:        result.SeedAudioFeatures.Tempo,
+			Energy:       result.SeedAudioFeatures.Energy,
+			Danceability: result.SeedAudioFeatures.Danceability,
+			Valence:      result.SeedAudioFeatures.Valence,
+			Acousticness: result.SeedAudioFeatures.Acousticness,
+		}
+	} else if result.SeedFeatures != nil {
+		seedFeatures = &audioFeaturesResult{
+			BPM:             result.SeedFeatures.BPM,
+			DurationSeconds: result.SeedFeatures.DurationSeconds,
+			Gain:            result.SeedFeatures.Gain,
+			Tags:            result.SeedFeatures.Tags,
 		}
 	}
 
@@ -164,13 +185,23 @@ func convertRecommendResult(result *domain.RecommendResult) recommendResponse {
 		}
 
 		var features *audioFeaturesResult
+		// Support both old AudioFeatures and new TrackFeatures
+		//nolint:staticcheck // backward compatibility
 		if rt.AudioFeatures != nil {
+			//nolint:staticcheck // backward compatibility
 			features = &audioFeaturesResult{
 				Tempo:        rt.AudioFeatures.Tempo,
 				Energy:       rt.AudioFeatures.Energy,
 				Danceability: rt.AudioFeatures.Danceability,
 				Valence:      rt.AudioFeatures.Valence,
 				Acousticness: rt.AudioFeatures.Acousticness,
+			}
+		} else if rt.Features != nil {
+			features = &audioFeaturesResult{
+				BPM:             rt.Features.BPM,
+				DurationSeconds: rt.Features.DurationSeconds,
+				Gain:            rt.Features.Gain,
+				Tags:            rt.Features.Tags,
 			}
 		}
 

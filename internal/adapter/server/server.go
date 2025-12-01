@@ -30,9 +30,12 @@ func New(cfg Config, h Handlers) *http.Server {
 		r.Get("/track/fetch", h.Track.FetchByURL)
 		r.Get("/track/search", h.Track.Search)
 		r.Get("/track/similar", h.Track.FetchSimilar)
-		r.Get("/track/recommend", h.Recommend.FetchRecommendations)
 		r.Get("/artist/fetch", h.Artist.FetchByURL)
 		r.Get("/album/fetch", h.Album.FetchByURL)
+	})
+
+	r.Route("/v2", func(r chi.Router) {
+		r.Get("/track/recommend", h.Recommend.FetchRecommendations)
 	})
 
 	return &http.Server{

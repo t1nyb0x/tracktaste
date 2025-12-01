@@ -10,7 +10,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 )
 
 // mockSpotifyAPIForAlbum for album handler tests
@@ -165,7 +165,7 @@ func TestAlbumHandler_FetchByURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAPI := &mockSpotifyAPIForAlbum{GetAlbumByIDFunc: tt.mockFunc}
-			albumUC := usecase.NewAlbumUseCase(mockAPI)
+			albumUC := usecasev1.NewAlbumUseCase(mockAPI)
 			handler := NewAlbumHandler(albumUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/album/fetch?url="+tt.url, nil)
@@ -237,7 +237,7 @@ func TestAlbumHandler_FetchByURL_EmptyTracks(t *testing.T) {
 			}, nil
 		},
 	}
-	albumUC := usecase.NewAlbumUseCase(mockAPI)
+	albumUC := usecasev1.NewAlbumUseCase(mockAPI)
 	handler := NewAlbumHandler(albumUC)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/album/fetch?url=https://open.spotify.com/album/abc123", nil)

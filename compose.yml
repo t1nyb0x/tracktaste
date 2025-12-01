@@ -12,9 +12,29 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - KKBOX_ID=${KKBOX_ID}
       - KKBOX_SECRET=${KKBOX_SECRET}
+      - LASTFM_API_KEY=${LASTFM_API_KEY}
+      - YTMUSIC_SIDECAR_URL=http://ytmusic-sidecar:8081
     depends_on:
       redis:
         condition: service_healthy
+      ytmusic-sidecar:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - tracktaste-network
+
+  ytmusic-sidecar:
+    build:
+      context: ./sidecar/ytmusic
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
     networks:
       - tracktaste-network
