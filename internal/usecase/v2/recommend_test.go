@@ -1,4 +1,4 @@
-package usecase
+package v2
 
 import (
 	"context"
@@ -69,36 +69,35 @@ func (m *mockMusicBrainzAPI) GetRecordingsByISRCBatch(ctx context.Context, isrcs
 }
 
 func (m *mockMusicBrainzAPI) GetArtistRecordings(ctx context.Context, artistMBID string, limit int) ([]domain.MBRecording, error) {
-	// Return empty list for mock
 	return []domain.MBRecording{}, nil
 }
 
-type mockSpotifyAPIV2 struct {
-	tracks       map[string]*domain.Track  // by track ID
-	tracksByISRC map[string]*domain.Track  // by ISRC
-	artists      map[string][]string       // artist ID -> genres
+type mockSpotifyAPI struct {
+	tracks       map[string]*domain.Track
+	tracksByISRC map[string]*domain.Track
+	artists      map[string][]string
 }
 
-func (m *mockSpotifyAPIV2) GetTrackByID(ctx context.Context, id string) (*domain.Track, error) {
+func (m *mockSpotifyAPI) GetTrackByID(ctx context.Context, id string) (*domain.Track, error) {
 	if track, ok := m.tracks[id]; ok {
 		return track, nil
 	}
 	return nil, domain.ErrTrackNotFound
 }
 
-func (m *mockSpotifyAPIV2) GetArtistByID(ctx context.Context, id string) (*domain.Artist, error) {
+func (m *mockSpotifyAPI) GetArtistByID(ctx context.Context, id string) (*domain.Artist, error) {
 	return nil, domain.ErrArtistNotFound
 }
 
-func (m *mockSpotifyAPIV2) GetAlbumByID(ctx context.Context, id string) (*domain.Album, error) {
+func (m *mockSpotifyAPI) GetAlbumByID(ctx context.Context, id string) (*domain.Album, error) {
 	return nil, domain.ErrAlbumNotFound
 }
 
-func (m *mockSpotifyAPIV2) SearchTracks(ctx context.Context, query string) ([]domain.Track, error) {
+func (m *mockSpotifyAPI) SearchTracks(ctx context.Context, query string) ([]domain.Track, error) {
 	return nil, nil
 }
 
-func (m *mockSpotifyAPIV2) SearchByISRC(ctx context.Context, isrc string) (*domain.Track, error) {
+func (m *mockSpotifyAPI) SearchByISRC(ctx context.Context, isrc string) (*domain.Track, error) {
 	if m.tracksByISRC != nil {
 		if track, ok := m.tracksByISRC[isrc]; ok {
 			return track, nil
@@ -107,26 +106,26 @@ func (m *mockSpotifyAPIV2) SearchByISRC(ctx context.Context, isrc string) (*doma
 	return nil, domain.ErrNotFound
 }
 
-func (m *mockSpotifyAPIV2) GetAudioFeatures(ctx context.Context, trackID string) (*domain.AudioFeatures, error) {
+func (m *mockSpotifyAPI) GetAudioFeatures(ctx context.Context, trackID string) (*domain.AudioFeatures, error) {
 	return nil, domain.ErrNotFound
 }
 
-func (m *mockSpotifyAPIV2) GetAudioFeaturesBatch(ctx context.Context, trackIDs []string) ([]domain.AudioFeatures, error) {
+func (m *mockSpotifyAPI) GetAudioFeaturesBatch(ctx context.Context, trackIDs []string) ([]domain.AudioFeatures, error) {
 	return nil, nil
 }
 
-func (m *mockSpotifyAPIV2) GetRecommendations(ctx context.Context, params external.RecommendationParams) ([]domain.Track, error) {
+func (m *mockSpotifyAPI) GetRecommendations(ctx context.Context, params external.RecommendationParams) ([]domain.Track, error) {
 	return nil, nil
 }
 
-func (m *mockSpotifyAPIV2) GetArtistGenres(ctx context.Context, artistID string) ([]string, error) {
+func (m *mockSpotifyAPI) GetArtistGenres(ctx context.Context, artistID string) ([]string, error) {
 	if genres, ok := m.artists[artistID]; ok {
 		return genres, nil
 	}
 	return nil, nil
 }
 
-func (m *mockSpotifyAPIV2) GetArtistGenresBatch(ctx context.Context, artistIDs []string) (map[string][]string, error) {
+func (m *mockSpotifyAPI) GetArtistGenresBatch(ctx context.Context, artistIDs []string) (map[string][]string, error) {
 	result := make(map[string][]string)
 	for _, id := range artistIDs {
 		if genres, ok := m.artists[id]; ok {
@@ -136,27 +135,27 @@ func (m *mockSpotifyAPIV2) GetArtistGenresBatch(ctx context.Context, artistIDs [
 	return result, nil
 }
 
-type mockKKBOXAPIV2 struct {
-	tracks     map[string]*external.KKBOXTrackInfo
+type mockKKBOXAPI struct {
+	tracks      map[string]*external.KKBOXTrackInfo
 	recommended []external.KKBOXTrackInfo
 }
 
-func (m *mockKKBOXAPIV2) SearchByISRC(ctx context.Context, isrc string) (*external.KKBOXTrackInfo, error) {
+func (m *mockKKBOXAPI) SearchByISRC(ctx context.Context, isrc string) (*external.KKBOXTrackInfo, error) {
 	if track, ok := m.tracks[isrc]; ok {
 		return track, nil
 	}
 	return nil, domain.ErrNotFound
 }
 
-func (m *mockKKBOXAPIV2) GetRecommendedTracks(ctx context.Context, trackID string) ([]external.KKBOXTrackInfo, error) {
+func (m *mockKKBOXAPI) GetRecommendedTracks(ctx context.Context, trackID string) ([]external.KKBOXTrackInfo, error) {
 	return m.recommended, nil
 }
 
-func (m *mockKKBOXAPIV2) GetTrackDetail(ctx context.Context, trackID string) (*external.KKBOXTrackInfo, error) {
+func (m *mockKKBOXAPI) GetTrackDetail(ctx context.Context, trackID string) (*external.KKBOXTrackInfo, error) {
 	return nil, domain.ErrNotFound
 }
 
-func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
+func TestRecommendUseCase_GetRecommendations(t *testing.T) {
 	isrc := "JPAB12345678"
 	trackID := "spotify-track-123"
 	artistID := "spotify-artist-123"
@@ -164,7 +163,7 @@ func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
 	isrc1 := "JPAB00000001"
 	isrc2 := "JPAB00000002"
 
-	spotifyAPI := &mockSpotifyAPIV2{
+	spotifyAPI := &mockSpotifyAPI{
 		tracks: map[string]*domain.Track{
 			trackID: {
 				ID:   trackID,
@@ -210,7 +209,7 @@ func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
 		},
 	}
 
-	kkboxAPI := &mockKKBOXAPIV2{
+	kkboxAPI := &mockKKBOXAPI{
 		tracks: map[string]*external.KKBOXTrackInfo{
 			isrc: {ID: "kkbox-123", Name: "Test Track", ISRC: isrc},
 		},
@@ -275,7 +274,7 @@ func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
 		},
 	}
 
-	uc := NewRecommendUseCaseV2(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
+	uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
 
 	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
 	if err != nil {
@@ -306,24 +305,24 @@ func TestRecommendUseCaseV2_GetRecommendations(t *testing.T) {
 	}
 }
 
-func TestRecommendUseCaseV2_GetRecommendations_NoISRC(t *testing.T) {
+func TestRecommendUseCase_GetRecommendations_NoISRC(t *testing.T) {
 	trackID := "spotify-track-no-isrc"
 
-	spotifyAPI := &mockSpotifyAPIV2{
+	spotifyAPI := &mockSpotifyAPI{
 		tracks: map[string]*domain.Track{
 			trackID: {
 				ID:   trackID,
 				Name: "Test Track",
-				ISRC: nil, // No ISRC
+				ISRC: nil,
 			},
 		},
 	}
 
-	kkboxAPI := &mockKKBOXAPIV2{}
+	kkboxAPI := &mockKKBOXAPI{}
 	deezerAPI := &mockDeezerAPI{}
 	mbAPI := &mockMusicBrainzAPI{}
 
-	uc := NewRecommendUseCaseV2(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
+	uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
 
 	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
 	if err != nil {
@@ -335,8 +334,8 @@ func TestRecommendUseCaseV2_GetRecommendations_NoISRC(t *testing.T) {
 	}
 }
 
-func TestRecommendUseCaseV2_MergeTags(t *testing.T) {
-	uc := &RecommendUseCaseV2{}
+func TestRecommendUseCase_MergeTags(t *testing.T) {
+	uc := &RecommendUseCase{}
 
 	tests := []struct {
 		name          string
@@ -374,19 +373,19 @@ func TestRecommendUseCaseV2_MergeTags(t *testing.T) {
 	}
 }
 
-func TestNewRecommendUseCaseV2(t *testing.T) {
-	spotifyAPI := &mockSpotifyAPIV2{}
-	kkboxAPI := &mockKKBOXAPIV2{}
+func TestNewRecommendUseCase(t *testing.T) {
+	spotifyAPI := &mockSpotifyAPI{}
+	kkboxAPI := &mockKKBOXAPI{}
 	deezerAPI := &mockDeezerAPI{}
 	mbAPI := &mockMusicBrainzAPI{}
 
-	uc := NewRecommendUseCaseV2(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
+	uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
 
 	if uc == nil {
-		t.Fatal("NewRecommendUseCaseV2 returned nil")
+		t.Fatal("NewRecommendUseCase returned nil")
 	}
-	if uc.calculatorV2 == nil {
-		t.Error("calculatorV2 should not be nil")
+	if uc.calculator == nil {
+		t.Error("calculator should not be nil")
 	}
 	if uc.genreMatcher == nil {
 		t.Error("genreMatcher should not be nil")

@@ -11,7 +11,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 )
 
 // mockSpotifyAPI for handler tests
@@ -215,8 +215,8 @@ func TestTrackHandler_FetchByURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAPI := &mockSpotifyAPI{GetTrackByIDFunc: tt.mockFunc}
-			trackUC := usecase.NewTrackUseCase(mockAPI)
-			similarUC := usecase.NewSimilarTracksUseCase(mockAPI, &mockKKBOXAPI{})
+			trackUC := usecasev1.NewTrackUseCase(mockAPI)
+			similarUC := usecasev1.NewSimilarTracksUseCase(mockAPI, &mockKKBOXAPI{})
 			handler := NewTrackHandler(trackUC, similarUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/track/fetch?url="+tt.url, nil)
@@ -303,8 +303,8 @@ func TestTrackHandler_Search(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAPI := &mockSpotifyAPI{SearchTracksFunc: tt.mockFunc}
-			trackUC := usecase.NewTrackUseCase(mockAPI)
-			similarUC := usecase.NewSimilarTracksUseCase(mockAPI, &mockKKBOXAPI{})
+			trackUC := usecasev1.NewTrackUseCase(mockAPI)
+			similarUC := usecasev1.NewSimilarTracksUseCase(mockAPI, &mockKKBOXAPI{})
 			handler := NewTrackHandler(trackUC, similarUC)
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/track/search?q="+url.QueryEscape(tt.query), nil)
@@ -426,13 +426,13 @@ func TestTrackHandler_FetchSimilar(t *testing.T) {
 			var handler *TrackHandler
 			if tt.setupMock != nil {
 				spotifyAPI, kkboxAPI := tt.setupMock()
-				trackUC := usecase.NewTrackUseCase(spotifyAPI)
-				similarUC := usecase.NewSimilarTracksUseCase(spotifyAPI, kkboxAPI)
+				trackUC := usecasev1.NewTrackUseCase(spotifyAPI)
+				similarUC := usecasev1.NewSimilarTracksUseCase(spotifyAPI, kkboxAPI)
 				handler = NewTrackHandler(trackUC, similarUC)
 			} else {
 				mockAPI := &mockSpotifyAPI{}
-				trackUC := usecase.NewTrackUseCase(mockAPI)
-				similarUC := usecase.NewSimilarTracksUseCase(mockAPI, &mockKKBOXAPI{})
+				trackUC := usecasev1.NewTrackUseCase(mockAPI)
+				similarUC := usecasev1.NewSimilarTracksUseCase(mockAPI, &mockKKBOXAPI{})
 				handler = NewTrackHandler(trackUC, similarUC)
 			}
 

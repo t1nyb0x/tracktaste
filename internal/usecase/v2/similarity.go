@@ -1,23 +1,25 @@
-// Package usecase contains business logic for TrackTaste.
-package usecase
+// Package v2 contains V2 business logic for TrackTaste.
+// V2 uses Deezer + MusicBrainz for track features.
+package v2
 
 import (
 	"math"
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
+	"github.com/t1nyb0x/tracktaste/internal/usecase"
 )
 
-// FeatureWeightsV2 defines weights for Deezer + MusicBrainz features.
-type FeatureWeightsV2 struct {
+// FeatureWeights defines weights for Deezer + MusicBrainz features.
+type FeatureWeights struct {
 	BPM           float64
 	Duration      float64
 	Gain          float64
 	TagSimilarity float64
 }
 
-// DefaultWeightsV2 returns the default feature weights for balanced mode.
-func DefaultWeightsV2() FeatureWeightsV2 {
-	return FeatureWeightsV2{
+// DefaultWeights returns the default feature weights for balanced mode.
+func DefaultWeights() FeatureWeights {
+	return FeatureWeights{
 		BPM:           1.5,
 		Duration:      0.5,
 		Gain:          1.2,
@@ -25,45 +27,45 @@ func DefaultWeightsV2() FeatureWeightsV2 {
 	}
 }
 
-// WeightsForModeV2 returns the feature weights for the specified recommendation mode.
-func WeightsForModeV2(mode domain.RecommendMode) FeatureWeightsV2 {
+// WeightsForMode returns the feature weights for the specified recommendation mode.
+func WeightsForMode(mode domain.RecommendMode) FeatureWeights {
 	switch mode {
 	case domain.RecommendModeSimilar:
-		return FeatureWeightsV2{
+		return FeatureWeights{
 			BPM:           2.0,
 			Duration:      0.8,
 			Gain:          1.5,
 			TagSimilarity: 1.0,
 		}
 	case domain.RecommendModeRelated:
-		return FeatureWeightsV2{
+		return FeatureWeights{
 			BPM:           0.5,
 			Duration:      0.3,
 			Gain:          0.5,
 			TagSimilarity: 3.0,
 		}
 	default: // balanced
-		return DefaultWeightsV2()
+		return DefaultWeights()
 	}
 }
 
-// SimilarityCalculatorV2 calculates similarity using Deezer + MusicBrainz features.
-type SimilarityCalculatorV2 struct {
-	weights      FeatureWeightsV2
-	genreMatcher *GenreMatcher
+// SimilarityCalculator calculates similarity using Deezer + MusicBrainz features.
+type SimilarityCalculator struct {
+	weights      FeatureWeights
+	genreMatcher *usecase.GenreMatcher
 }
 
-// NewSimilarityCalculatorV2 creates a new SimilarityCalculatorV2.
-func NewSimilarityCalculatorV2(weights FeatureWeightsV2, genreMatcher *GenreMatcher) *SimilarityCalculatorV2 {
-	return &SimilarityCalculatorV2{
+// NewSimilarityCalculator creates a new SimilarityCalculator.
+func NewSimilarityCalculator(weights FeatureWeights, genreMatcher *usecase.GenreMatcher) *SimilarityCalculator {
+	return &SimilarityCalculator{
 		weights:      weights,
 		genreMatcher: genreMatcher,
 	}
 }
 
-// CalculateV2 computes the similarity score between two TrackFeatures.
+// Calculate computes the similarity score between two TrackFeatures.
 // Returns a value between 0.0 and 1.0, where 1.0 means identical.
-func (c *SimilarityCalculatorV2) CalculateV2(seed, candidate *domain.TrackFeatures) float64 {
+func (c *SimilarityCalculator) Calculate(seed, candidate *domain.TrackFeatures) float64 {
 	if seed == nil || candidate == nil {
 		return 0.5 // Neutral score when features are unavailable
 	}
@@ -107,11 +109,11 @@ func (c *SimilarityCalculatorV2) CalculateV2(seed, candidate *domain.TrackFeatur
 }
 
 // CalculateWithBonus computes the final score including genre and artist bonuses.
-func (c *SimilarityCalculatorV2) CalculateWithBonus(
+func (c *SimilarityCalculator) CalculateWithBonus(
 	seed, candidate *domain.TrackFeatures,
 	seedArtist, candidateArtist *domain.ArtistInfo,
 ) (baseSimilarity, genreBonus, artistBonus, finalScore float64) {
-	baseSimilarity = c.CalculateV2(seed, candidate)
+	baseSimilarity = c.Calculate(seed, candidate)
 
 	// Genre bonus from GenreMatcher
 	genreBonus = 1.0
@@ -127,14 +129,14 @@ func (c *SimilarityCalculatorV2) CalculateWithBonus(
 }
 
 // bpmSimilarity calculates BPM similarity.
-func (c *SimilarityCalculatorV2) bpmSimilarity(bpmA, bpmB float64) float64 {
+func (c *SimilarityCalculator) bpmSimilarity(bpmA, bpmB float64) float64 {
 	// BPM range: 0-250, normalize the difference
 	diff := math.Abs(bpmA-bpmB) / 250.0
 	return 1.0 - diff
 }
 
 // durationSimilarity calculates duration similarity.
-func (c *SimilarityCalculatorV2) durationSimilarity(durA, durB int) float64 {
+func (c *SimilarityCalculator) durationSimilarity(durA, durB int) float64 {
 	// Max duration difference: 10 minutes (600 seconds)
 	diff := math.Abs(float64(durA-durB)) / 600.0
 	if diff > 1.0 {
@@ -144,7 +146,7 @@ func (c *SimilarityCalculatorV2) durationSimilarity(durA, durB int) float64 {
 }
 
 // gainSimilarity calculates gain (loudness) similarity.
-func (c *SimilarityCalculatorV2) gainSimilarity(gainA, gainB float64) float64 {
+func (c *SimilarityCalculator) gainSimilarity(gainA, gainB float64) float64 {
 	// Gain range: -20 to 0 dB
 	diff := math.Abs(gainA-gainB) / 20.0
 	if diff > 1.0 {
@@ -154,7 +156,7 @@ func (c *SimilarityCalculatorV2) gainSimilarity(gainA, gainB float64) float64 {
 }
 
 // tagSimilarity calculates Jaccard similarity coefficient for tags.
-func (c *SimilarityCalculatorV2) tagSimilarity(tagsA, tagsB []string) float64 {
+func (c *SimilarityCalculator) tagSimilarity(tagsA, tagsB []string) float64 {
 	if len(tagsA) == 0 && len(tagsB) == 0 {
 		return 0.5 // Neutral when both have no tags
 	}
@@ -194,7 +196,7 @@ func (c *SimilarityCalculatorV2) tagSimilarity(tagsA, tagsB []string) float64 {
 }
 
 // calculateArtistBonus calculates bonus based on artist relations.
-func (c *SimilarityCalculatorV2) calculateArtistBonus(seedArtist, candidateArtist *domain.ArtistInfo) float64 {
+func (c *SimilarityCalculator) calculateArtistBonus(seedArtist, candidateArtist *domain.ArtistInfo) float64 {
 	if seedArtist == nil || candidateArtist == nil {
 		return 1.0 // No bonus/penalty
 	}
@@ -226,7 +228,7 @@ func (c *SimilarityCalculatorV2) calculateArtistBonus(seedArtist, candidateArtis
 }
 
 // hasGroupRelation checks if artists are in the same group.
-func (c *SimilarityCalculatorV2) hasGroupRelation(artistA, artistB *domain.ArtistInfo) bool {
+func (c *SimilarityCalculator) hasGroupRelation(artistA, artistB *domain.ArtistInfo) bool {
 	if artistA == nil || artistB == nil {
 		return false
 	}
@@ -269,7 +271,7 @@ func (c *SimilarityCalculatorV2) hasGroupRelation(artistA, artistB *domain.Artis
 }
 
 // hasVoiceActorRelation checks if artists share a voice actor.
-func (c *SimilarityCalculatorV2) hasVoiceActorRelation(artistA, artistB *domain.ArtistInfo) bool {
+func (c *SimilarityCalculator) hasVoiceActorRelation(artistA, artistB *domain.ArtistInfo) bool {
 	if artistA == nil || artistB == nil {
 		return false
 	}
@@ -294,7 +296,7 @@ func (c *SimilarityCalculatorV2) hasVoiceActorRelation(artistA, artistB *domain.
 }
 
 // hasCollaborationRelation checks if artists have collaborated.
-func (c *SimilarityCalculatorV2) hasCollaborationRelation(artistA, artistB *domain.ArtistInfo) bool {
+func (c *SimilarityCalculator) hasCollaborationRelation(artistA, artistB *domain.ArtistInfo) bool {
 	if artistA == nil || artistB == nil {
 		return false
 	}
@@ -318,8 +320,8 @@ func (c *SimilarityCalculatorV2) hasCollaborationRelation(artistA, artistB *doma
 	return false
 }
 
-// MatchReasonsV2 analyzes which features are similar between two tracks.
-func (c *SimilarityCalculatorV2) MatchReasonsV2(seed, candidate *domain.TrackFeatures) []string {
+// MatchReasons analyzes which features are similar between two tracks.
+func (c *SimilarityCalculator) MatchReasons(seed, candidate *domain.TrackFeatures) []string {
 	if seed == nil || candidate == nil {
 		return nil
 	}
@@ -357,7 +359,7 @@ func (c *SimilarityCalculatorV2) MatchReasonsV2(seed, candidate *domain.TrackFea
 }
 
 // findCommonTags returns common tags between two tag lists.
-func (c *SimilarityCalculatorV2) findCommonTags(tagsA, tagsB []string) []string {
+func (c *SimilarityCalculator) findCommonTags(tagsA, tagsB []string) []string {
 	setA := make(map[string]bool)
 	for _, tag := range tagsA {
 		setA[tag] = true

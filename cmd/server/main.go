@@ -23,7 +23,8 @@ import (
 	"github.com/t1nyb0x/tracktaste/internal/adapter/gateway/ytmusic"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/handler"
 	"github.com/t1nyb0x/tracktaste/internal/adapter/server"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
+	usecasev2 "github.com/t1nyb0x/tracktaste/internal/usecase/v2"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
@@ -105,13 +106,13 @@ func main() {
 	deezerGW := deezer.NewGateway()
 	musicbrainzGW := musicbrainz.NewGateway("TrackTaste/1.0 (https://github.com/t1nyb0x/tracktaste)")
 
-	trackUC := usecase.NewTrackUseCase(spotifyGW)
-	artistUC := usecase.NewArtistUseCase(spotifyGW)
-	albumUC := usecase.NewAlbumUseCase(spotifyGW)
-	similarUC := usecase.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
+	trackUC := usecasev1.NewTrackUseCase(spotifyGW)
+	artistUC := usecasev1.NewArtistUseCase(spotifyGW)
+	albumUC := usecasev1.NewAlbumUseCase(spotifyGW)
+	similarUC := usecasev1.NewSimilarTracksUseCase(spotifyGW, kkboxGW)
 
 	// Create recommend use case with optional APIs
-	var recommendUC *usecase.RecommendUseCaseV2
+	var recommendUC *usecasev2.RecommendUseCase
 	
 	// Initialize optional gateways
 	var lastfmGW *lastfm.Gateway
@@ -132,9 +133,9 @@ func main() {
 
 	// Create recommend use case with available APIs
 	if lastfmGW != nil || ytmusicGW != nil {
-		recommendUC = usecase.NewRecommendUseCaseV2Full(spotifyGW, kkboxGW, deezerGW, musicbrainzGW, lastfmGW, ytmusicGW)
+		recommendUC = usecasev2.NewRecommendUseCaseFull(spotifyGW, kkboxGW, deezerGW, musicbrainzGW, lastfmGW, ytmusicGW)
 	} else {
-		recommendUC = usecase.NewRecommendUseCaseV2(spotifyGW, kkboxGW, deezerGW, musicbrainzGW)
+		recommendUC = usecasev2.NewRecommendUseCase(spotifyGW, kkboxGW, deezerGW, musicbrainzGW)
 	}
 
 	trackH := handler.NewTrackHandler(trackUC, similarUC)

@@ -1,5 +1,6 @@
-// Package usecase contains business logic for TrackTaste.
-package usecase
+// Package v2 contains V2 business logic for TrackTaste.
+// V2 uses Deezer + MusicBrainz for track features and multi-source candidate collection.
+package v2
 
 import (
 	"context"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
+	"github.com/t1nyb0x/tracktaste/internal/usecase"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
@@ -26,66 +28,66 @@ const (
 	deezerConcurrency        = 15 // Concurrent Deezer API calls
 )
 
-// RecommendUseCaseV2 handles track recommendation using Deezer + MusicBrainz.
-type RecommendUseCaseV2 struct {
+// RecommendUseCase handles track recommendation using Deezer + MusicBrainz.
+type RecommendUseCase struct {
 	spotifyAPI     external.SpotifyAPI
 	kkboxAPI       external.KKBOXAPI
 	deezerAPI      external.DeezerAPI
 	musicBrainzAPI external.MusicBrainzAPI
-	lastfmAPI      external.LastFMAPI      // Optional: can be nil
+	lastfmAPI      external.LastFMAPI       // Optional: can be nil
 	ytmusicAPI     external.YouTubeMusicAPI // Optional: can be nil
-	calculatorV2   *SimilarityCalculatorV2
-	genreMatcher   *GenreMatcher
+	calculator     *SimilarityCalculator
+	genreMatcher   *usecase.GenreMatcher
 }
 
-// NewRecommendUseCaseV2 creates a new RecommendUseCaseV2.
-func NewRecommendUseCaseV2(
+// NewRecommendUseCase creates a new RecommendUseCase.
+func NewRecommendUseCase(
 	spotifyAPI external.SpotifyAPI,
 	kkboxAPI external.KKBOXAPI,
 	deezerAPI external.DeezerAPI,
 	musicBrainzAPI external.MusicBrainzAPI,
-) *RecommendUseCaseV2 {
-	genreMatcher := NewGenreMatcher()
-	return &RecommendUseCaseV2{
+) *RecommendUseCase {
+	genreMatcher := usecase.NewGenreMatcher()
+	return &RecommendUseCase{
 		spotifyAPI:     spotifyAPI,
 		kkboxAPI:       kkboxAPI,
 		deezerAPI:      deezerAPI,
 		musicBrainzAPI: musicBrainzAPI,
-		calculatorV2:   NewSimilarityCalculatorV2(DefaultWeightsV2(), genreMatcher),
+		calculator:     NewSimilarityCalculator(DefaultWeights(), genreMatcher),
 		genreMatcher:   genreMatcher,
 	}
 }
 
-// NewRecommendUseCaseV2WithLastFM creates a new RecommendUseCaseV2 with Last.fm support.
-func NewRecommendUseCaseV2WithLastFM(
+// NewRecommendUseCaseWithLastFM creates a new RecommendUseCase with Last.fm support.
+func NewRecommendUseCaseWithLastFM(
 	spotifyAPI external.SpotifyAPI,
 	kkboxAPI external.KKBOXAPI,
 	deezerAPI external.DeezerAPI,
 	musicBrainzAPI external.MusicBrainzAPI,
 	lastfmAPI external.LastFMAPI,
-) *RecommendUseCaseV2 {
-	uc := NewRecommendUseCaseV2(spotifyAPI, kkboxAPI, deezerAPI, musicBrainzAPI)
+) *RecommendUseCase {
+	uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, musicBrainzAPI)
 	uc.lastfmAPI = lastfmAPI
 	return uc
 }
 
-// NewRecommendUseCaseV2Full creates a new RecommendUseCaseV2 with all optional APIs.
-func NewRecommendUseCaseV2Full(
+// NewRecommendUseCaseFull creates a new RecommendUseCase with all optional APIs.
+func NewRecommendUseCaseFull(
 	spotifyAPI external.SpotifyAPI,
 	kkboxAPI external.KKBOXAPI,
 	deezerAPI external.DeezerAPI,
 	musicBrainzAPI external.MusicBrainzAPI,
 	lastfmAPI external.LastFMAPI,
 	ytmusicAPI external.YouTubeMusicAPI,
-) *RecommendUseCaseV2 {
-	uc := NewRecommendUseCaseV2(spotifyAPI, kkboxAPI, deezerAPI, musicBrainzAPI)
+) *RecommendUseCase {
+	uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, musicBrainzAPI)
 	uc.lastfmAPI = lastfmAPI
 	uc.ytmusicAPI = ytmusicAPI
 	return uc
 }
 
 // GetRecommendations returns recommended tracks using Deezer + MusicBrainz features.
-func (uc *RecommendUseCaseV2) GetRecommendations(
+func (uc *RecommendUseCase) GetRecommendations(
 	ctx context.Context,
 	trackID string,
 	mode domain.RecommendMode,
@@ -95,7 +97,7 @@ func (uc *RecommendUseCaseV2) GetRecommendations(
 	defer cancel()
 
 	// Update calculator weights based on mode
-	uc.calculatorV2 = NewSimilarityCalculatorV2(WeightsForModeV2(mode), uc.genreMatcher)
+	uc.calculator = NewSimilarityCalculator(WeightsForMode(mode), uc.genreMatcher)
 
 	if limit <= 0 || limit > maxRecommendedTracksV2 {
 		limit = maxRecommendedTracksV2
@@ -172,7 +174,7 @@ func (uc *RecommendUseCaseV2) GetRecommendations(
 }
 
 // getSeedFeatures retrieves features for the seed track from Deezer and MusicBrainz.
-func (uc *RecommendUseCaseV2) getSeedFeatures(
+func (uc *RecommendUseCase) getSeedFeatures(
 	ctx context.Context,
 	track *domain.Track,
 ) (*domain.TrackFeatures, *domain.ArtistInfo) {
@@ -250,7 +252,7 @@ func (uc *RecommendUseCaseV2) getSeedFeatures(
 }
 
 // getArtistGenres gets Spotify genres for the track's primary artist.
-func (uc *RecommendUseCaseV2) getArtistGenres(ctx context.Context, track *domain.Track) []string {
+func (uc *RecommendUseCase) getArtistGenres(ctx context.Context, track *domain.Track) []string {
 	if len(track.Artists) == 0 {
 		return nil
 	}
@@ -265,7 +267,7 @@ func (uc *RecommendUseCaseV2) getArtistGenres(ctx context.Context, track *domain
 }
 
 // mergeTags merges MusicBrainz tags and Spotify genres, removing duplicates.
-func (uc *RecommendUseCaseV2) mergeTags(mbTags, spotifyGenres []string) []string {
+func (uc *RecommendUseCase) mergeTags(mbTags, spotifyGenres []string) []string {
 	seen := make(map[string]bool)
 	result := make([]string, 0, len(mbTags)+len(spotifyGenres))
 
@@ -285,7 +287,7 @@ func (uc *RecommendUseCaseV2) mergeTags(mbTags, spotifyGenres []string) []string
 }
 
 // collectCandidatesV2 collects candidate tracks from KKBOX.
-func (uc *RecommendUseCaseV2) collectCandidatesV2(
+func (uc *RecommendUseCase) collectCandidatesV2(
 	ctx context.Context,
 	seedTrack *domain.Track,
 ) []domain.Track {
@@ -345,7 +347,7 @@ func (uc *RecommendUseCaseV2) collectCandidatesV2(
 
 // collectCandidatesMultiSource collects candidate tracks from multiple sources in parallel.
 // Sources: (1) KKBOX recommendations (2) Last.fm similar tracks (3) MusicBrainz artist recordings (4) YouTube Music
-func (uc *RecommendUseCaseV2) collectCandidatesMultiSource(
+func (uc *RecommendUseCase) collectCandidatesMultiSource(
 	ctx context.Context,
 	seedTrack *domain.Track,
 	seedFeatures *domain.TrackFeatures,
@@ -435,7 +437,7 @@ func (uc *RecommendUseCaseV2) collectCandidatesMultiSource(
 }
 
 // collectFromKKBOX collects candidates from KKBOX recommendations.
-func (uc *RecommendUseCaseV2) collectFromKKBOX(ctx context.Context, seedTrack *domain.Track) []domain.Track {
+func (uc *RecommendUseCase) collectFromKKBOX(ctx context.Context, seedTrack *domain.Track) []domain.Track {
 	if seedTrack.ISRC == nil || *seedTrack.ISRC == "" {
 		return nil
 	}
@@ -468,7 +470,7 @@ func (uc *RecommendUseCaseV2) collectFromKKBOX(ctx context.Context, seedTrack *d
 }
 
 // collectFromLastFM collects candidates from Last.fm track.getSimilar.
-func (uc *RecommendUseCaseV2) collectFromLastFM(ctx context.Context, seedTrack *domain.Track) []domain.Track {
+func (uc *RecommendUseCase) collectFromLastFM(ctx context.Context, seedTrack *domain.Track) []domain.Track {
 	if uc.lastfmAPI == nil {
 		return nil
 	}
@@ -507,7 +509,7 @@ func (uc *RecommendUseCaseV2) collectFromLastFM(ctx context.Context, seedTrack *
 }
 
 // collectFromMusicBrainzArtist collects other tracks by the same artist from MusicBrainz.
-func (uc *RecommendUseCaseV2) collectFromMusicBrainzArtist(ctx context.Context, artistMBID string, seedTrack *domain.Track) []domain.Track {
+func (uc *RecommendUseCase) collectFromMusicBrainzArtist(ctx context.Context, artistMBID string, seedTrack *domain.Track) []domain.Track {
 	recordings, err := uc.musicBrainzAPI.GetArtistRecordings(ctx, artistMBID, mbArtistCandidateLimitV2)
 	if err != nil {
 		logger.Warning("RecommendV2", "MusicBrainzアーティスト曲取得エラー: "+err.Error())
@@ -536,7 +538,7 @@ func (uc *RecommendUseCaseV2) collectFromMusicBrainzArtist(ctx context.Context, 
 }
 
 // collectFromYouTubeMusic collects candidates from YouTube Music similar tracks.
-func (uc *RecommendUseCaseV2) collectFromYouTubeMusic(ctx context.Context, seedTrack *domain.Track) []domain.Track {
+func (uc *RecommendUseCase) collectFromYouTubeMusic(ctx context.Context, seedTrack *domain.Track) []domain.Track {
 	if uc.ytmusicAPI == nil {
 		return nil
 	}
@@ -589,14 +591,14 @@ func (uc *RecommendUseCaseV2) collectFromYouTubeMusic(ctx context.Context, seedT
 // enrichCandidatesParallel fetches Spotify track details and Deezer features in parallel.
 // This combines enrichCandidatesWithSpotify and getCandidateFeatures for better performance.
 // Handles both ISRC-based and name-based (Last.fm) candidates.
-func (uc *RecommendUseCaseV2) enrichCandidatesParallel(
+func (uc *RecommendUseCase) enrichCandidatesParallel(
 	ctx context.Context,
 	candidates []domain.Track,
 ) ([]domain.Track, map[string]*domain.TrackFeatures) {
 	// Separate candidates with ISRC and without ISRC (Last.fm)
 	var isrcCandidates []domain.Track
 	var nameCandidates []domain.Track
-	
+
 	for _, c := range candidates {
 		if c.ISRC != nil && *c.ISRC != "" {
 			isrcCandidates = append(isrcCandidates, c)
@@ -612,7 +614,7 @@ func (uc *RecommendUseCaseV2) enrichCandidatesParallel(
 	}
 
 	// Result containers
-	enrichedTracks := make(map[string]*domain.Track)  // ISRC -> Track
+	enrichedTracks := make(map[string]*domain.Track)   // ISRC -> Track
 	features := make(map[string]*domain.TrackFeatures) // ISRC -> Features (temporary)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -722,7 +724,7 @@ func (uc *RecommendUseCaseV2) enrichCandidatesParallel(
 				resolvedISRCs = append(resolvedISRCs, isrc)
 			}
 		}
-		
+
 		if len(resolvedISRCs) > 0 {
 			deezerTracks, err := uc.deezerAPI.GetTracksByISRCBatch(ctx, resolvedISRCs)
 			if err == nil {
@@ -765,7 +767,7 @@ func (uc *RecommendUseCaseV2) enrichCandidatesParallel(
 
 // filterByGenre removes candidates with unrelated genres to improve recommendation quality.
 // Keeps candidates where genre bonus >= 1.0 (exact match, same group, or related).
-func (uc *RecommendUseCaseV2) filterByGenre(
+func (uc *RecommendUseCase) filterByGenre(
 	candidates []domain.Track,
 	features map[string]*domain.TrackFeatures,
 	seedGenres []string,
@@ -808,7 +810,7 @@ func (uc *RecommendUseCaseV2) filterByGenre(
 }
 
 // getCandidateFeatures retrieves features for candidate tracks (legacy, kept for compatibility).
-func (uc *RecommendUseCaseV2) getCandidateFeatures(
+func (uc *RecommendUseCase) getCandidateFeatures(
 	ctx context.Context,
 	candidates []domain.Track,
 ) (map[string]*domain.TrackFeatures, map[string]*domain.ArtistInfo) {
@@ -884,7 +886,7 @@ func (uc *RecommendUseCaseV2) getCandidateFeatures(
 }
 
 // calculateScores calculates similarity scores for all candidates.
-func (uc *RecommendUseCaseV2) calculateScores(
+func (uc *RecommendUseCase) calculateScores(
 	seedFeatures *domain.TrackFeatures,
 	seedArtistInfo *domain.ArtistInfo,
 	seedGenres []string,
@@ -910,13 +912,13 @@ func (uc *RecommendUseCaseV2) calculateScores(
 		candidateArtist := candidateArtistInfos[candidate.ID]
 
 		// Calculate similarity with bonuses
-		baseSim, genreBonus, artistBonus, _ := uc.calculatorV2.CalculateWithBonus(
+		baseSim, genreBonus, artistBonus, _ := uc.calculator.CalculateWithBonus(
 			seedFeatures, candidateFeature,
 			seedArtistInfo, candidateArtist,
 		)
 
 		// Get match reasons
-		matchReasons := uc.calculatorV2.MatchReasonsV2(seedFeatures, candidateFeature)
+		matchReasons := uc.calculator.MatchReasons(seedFeatures, candidateFeature)
 
 		// Add genre match reason if applicable
 		if candidateFeature != nil && genreBonus > 1.0 {
@@ -964,7 +966,7 @@ func (uc *RecommendUseCaseV2) calculateScores(
 }
 
 // detectSeriesMatch detects if two tracks belong to the same series/franchise.
-func (uc *RecommendUseCaseV2) detectSeriesMatch(seedName, candidateName string, reasons []string) (float64, []string) {
+func (uc *RecommendUseCase) detectSeriesMatch(seedName, candidateName string, reasons []string) (float64, []string) {
 	seedLower := strings.ToLower(seedName)
 	candidateLower := strings.ToLower(candidateName)
 

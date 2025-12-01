@@ -9,7 +9,7 @@ import (
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/port/external"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 )
 
 // mockSpotifyAPI for recommend handler tests
@@ -213,7 +213,7 @@ func TestRecommendHandler_FetchRecommendations(t *testing.T) {
 			kkboxMock := &mockRecommendKKBOXAPI{}
 			tt.setupMock(spotifyMock, kkboxMock)
 
-			uc := usecase.NewRecommendUseCase(spotifyMock, kkboxMock)
+			uc := usecasev1.NewRecommendUseCase(spotifyMock, kkboxMock)
 			h := NewRecommendHandler(uc)
 
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)

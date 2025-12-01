@@ -1,4 +1,4 @@
-package usecase
+package v2
 
 import (
 	"math"
@@ -7,8 +7,8 @@ import (
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 )
 
-func TestSimilarityCalculatorV2_CalculateV2(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_Calculate(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name      string
@@ -82,16 +82,16 @@ func TestSimilarityCalculatorV2_CalculateV2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := calc.CalculateV2(tt.seed, tt.candidate)
+			got := calc.Calculate(tt.seed, tt.candidate)
 			if got < tt.wantMin || got > tt.wantMax {
-				t.Errorf("CalculateV2() = %v, want between %v and %v", got, tt.wantMin, tt.wantMax)
+				t.Errorf("Calculate() = %v, want between %v and %v", got, tt.wantMin, tt.wantMax)
 			}
 		})
 	}
 }
 
-func TestSimilarityCalculatorV2_bpmSimilarity(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_bpmSimilarity(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name    string
@@ -115,8 +115,8 @@ func TestSimilarityCalculatorV2_bpmSimilarity(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_durationSimilarity(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_durationSimilarity(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name    string
@@ -140,8 +140,8 @@ func TestSimilarityCalculatorV2_durationSimilarity(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_gainSimilarity(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_gainSimilarity(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name    string
@@ -165,8 +165,8 @@ func TestSimilarityCalculatorV2_gainSimilarity(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_tagSimilarity(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_tagSimilarity(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name    string
@@ -186,7 +186,7 @@ func TestSimilarityCalculatorV2_tagSimilarity(t *testing.T) {
 			name:    "partial overlap",
 			tagsA:   []string{"anime", "jpop", "female vocalist"},
 			tagsB:   []string{"anime", "rock"},
-			wantMin: 0.2, // 1 common out of 4 unique
+			wantMin: 0.2,
 			wantMax: 0.3,
 		},
 		{
@@ -215,8 +215,8 @@ func TestSimilarityCalculatorV2_tagSimilarity(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_calculateArtistBonus(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_calculateArtistBonus(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name     string
@@ -274,8 +274,8 @@ func TestSimilarityCalculatorV2_calculateArtistBonus(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_MatchReasonsV2(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_MatchReasons(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name      string
@@ -307,15 +307,15 @@ func TestSimilarityCalculatorV2_MatchReasonsV2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := calc.MatchReasonsV2(tt.seed, tt.candidate)
+			got := calc.MatchReasons(tt.seed, tt.candidate)
 			if len(got) != tt.wantLen {
-				t.Errorf("MatchReasonsV2() returned %d reasons, want %d: %v", len(got), tt.wantLen, got)
+				t.Errorf("MatchReasons() returned %d reasons, want %d: %v", len(got), tt.wantLen, got)
 			}
 		})
 	}
 }
 
-func TestWeightsForModeV2(t *testing.T) {
+func TestWeightsForMode(t *testing.T) {
 	tests := []struct {
 		mode     domain.RecommendMode
 		checkBPM float64
@@ -328,7 +328,7 @@ func TestWeightsForModeV2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.mode), func(t *testing.T) {
-			weights := WeightsForModeV2(tt.mode)
+			weights := WeightsForMode(tt.mode)
 			if weights.BPM != tt.checkBPM {
 				t.Errorf("BPM weight = %v, want %v", weights.BPM, tt.checkBPM)
 			}
@@ -339,8 +339,8 @@ func TestWeightsForModeV2(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_hasGroupRelation(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_hasGroupRelation(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name    string
@@ -395,8 +395,8 @@ func TestSimilarityCalculatorV2_hasGroupRelation(t *testing.T) {
 	}
 }
 
-func TestSimilarityCalculatorV2_findCommonTags(t *testing.T) {
-	calc := NewSimilarityCalculatorV2(DefaultWeightsV2(), nil)
+func TestSimilarityCalculator_findCommonTags(t *testing.T) {
+	calc := NewSimilarityCalculator(DefaultWeights(), nil)
 
 	tests := []struct {
 		name    string

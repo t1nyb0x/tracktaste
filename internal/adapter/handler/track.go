@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"github.com/t1nyb0x/tracktaste/internal/domain"
-	"github.com/t1nyb0x/tracktaste/internal/usecase"
+	usecasev1 "github.com/t1nyb0x/tracktaste/internal/usecase/v1"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
 type TrackHandler struct {
-	trackUC   *usecase.TrackUseCase
-	similarUC *usecase.SimilarTracksUseCase
+	trackUC   *usecasev1.TrackUseCase
+	similarUC *usecasev1.SimilarTracksUseCase
 }
 
-func NewTrackHandler(trackUC *usecase.TrackUseCase, similarUC *usecase.SimilarTracksUseCase) *TrackHandler {
+func NewTrackHandler(trackUC *usecasev1.TrackUseCase, similarUC *usecasev1.SimilarTracksUseCase) *TrackHandler {
 	return &TrackHandler{trackUC: trackUC, similarUC: similarUC}
 }
 
