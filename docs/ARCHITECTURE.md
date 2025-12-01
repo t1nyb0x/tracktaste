@@ -13,9 +13,15 @@ tracktaste/
 │   └── server/
 │       └── main.go                 # エントリーポイント、DI（依存性注入）
 │
+├── sidecar/
+│   └── ytmusic/                    # YouTube Music Python sidecar
+│       ├── main.py                 # FastAPIサーバー (ytmusicapi)
+│       ├── Dockerfile
+│       └── requirements.txt
+│
 └── internal/
     ├── domain/                      # ドメイン層（最も内側）
-    │   ├── track.go                # Track, SimpleTrack, SimilarTrack
+    │   ├── track.go                # Track, SimpleTrack, SimilarTrack, TrackFeatures
     │   ├── artist.go               # Artist, SimpleArtist
     │   ├── album.go                # Album
     │   ├── image.go                # Image
@@ -26,13 +32,20 @@ tracktaste/
     │   │   └── token.go            # TokenRepository interface
     │   └── external/
     │       ├── spotify.go          # SpotifyAPI interface
-    │       └── kkbox.go            # KKBOXAPI interface
+    │       ├── kkbox.go            # KKBOXAPI interface
+    │       ├── deezer.go           # DeezerAPI interface
+    │       ├── musicbrainz.go      # MusicBrainzAPI interface
+    │       ├── lastfm.go           # LastFMAPI interface
+    │       └── ytmusic.go          # YouTubeMusicAPI interface
     │
     ├── usecase/                     # ユースケース層（ビジネスロジック）
     │   ├── track.go                # TrackUseCase
     │   ├── artist.go               # ArtistUseCase
     │   ├── album.go                # AlbumUseCase
-    │   └── similar_tracks.go       # SimilarTracksUseCase
+    │   ├── similar_tracks.go       # SimilarTracksUseCase
+    │   ├── recommend_v2.go         # RecommendUseCaseV2 (マルチソースレコメンド)
+    │   ├── similarity.go           # SimilarityCalculatorV2
+    │   └── genre_matcher.go        # GenreMatcher
     │
     ├── adapter/                     # アダプター層（最も外側）
     │   ├── gateway/                # Secondary Adapters（外部API実装）
@@ -41,6 +54,14 @@ tracktaste/
     │   │   │   └── types.go        # Spotify API レスポンス型
     │   │   ├── kkbox/
     │   │   │   └── gateway.go      # KKBOXAPI 実装
+    │   │   ├── deezer/
+    │   │   │   └── gateway.go      # DeezerAPI 実装 (BPM/Gain)
+    │   │   ├── musicbrainz/
+    │   │   │   └── gateway.go      # MusicBrainzAPI 実装 (Tags/Relations)
+    │   │   ├── lastfm/
+    │   │   │   └── gateway.go      # LastFMAPI 実装 (track.getSimilar)
+    │   │   ├── ytmusic/
+    │   │   │   └── gateway.go      # YouTubeMusicAPI 実装 (sidecar client)
     │   │   ├── cache/
     │   │   │   └── repository.go   # 2層キャッシュ TokenRepository 実装
     │   │   └── redis/
@@ -75,7 +96,11 @@ tracktaste/
 │   │  │                  │          │                          │ │   │
 │   │  │  • TrackHandler  │          │  • spotify.Gateway       │ │   │
 │   │  │  • ArtistHandler │          │  • kkbox.Gateway         │ │   │
-│   │  │  • AlbumHandler  │          │  • redis.TokenRepository │ │   │
+│   │  │  • AlbumHandler  │          │  • deezer.Gateway        │ │   │
+│   │  │                  │          │  • musicbrainz.Gateway   │ │   │
+│   │  │                  │          │  • lastfm.Gateway        │ │   │
+│   │  │                  │          │  • ytmusic.Gateway       │ │   │
+│   │  │                  │          │  • redis.TokenRepository │ │   │
 │   │  └────────┬─────────┘          └─────────────▲────────────┘ │   │
 │   │           │                                  │              │   │
 │   └───────────│──────────────────────────────────│──────────────┘   │
@@ -87,6 +112,7 @@ tracktaste/
 │   │  • ArtistUseCase        ─────────►          │              │   │
 │   │  • AlbumUseCase                              │              │   │
 │   │  • SimilarTracksUseCase                      │              │   │
+│   │  • RecommendUseCaseV2                        │              │   │
 │   │                                              │              │   │
 │   └───────────┬──────────────────────────────────│──────────────┘   │
 │               │                                  │                  │
@@ -96,6 +122,10 @@ tracktaste/
 │   │                                              │              │   │
 │   │  • SpotifyAPI (interface)  ◄─────────────────┘              │   │
 │   │  • KKBOXAPI (interface)                                     │   │
+│   │  • DeezerAPI (interface)                                    │   │
+│   │  • MusicBrainzAPI (interface)                               │   │
+│   │  • LastFMAPI (interface)                                    │   │
+│   │  • YouTubeMusicAPI (interface)                              │   │
 │   │  • TokenRepository (interface)                              │   │
 │   │                                                             │   │
 │   └───────────┬─────────────────────────────────────────────────┘   │
