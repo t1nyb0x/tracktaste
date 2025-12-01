@@ -37,10 +37,10 @@ func (f *TrackFeatures) GetTagNames() []string {
 
 // ArtistInfo represents artist information for relation bonus calculation.
 type ArtistInfo struct {
-	SpotifyID  string       // Spotify Artist ID
-	MBID       string       // MusicBrainz Artist ID
-	Name       string       // Artist name
-	Genres     []string     // Spotify genres
-	Tags       []MBTag      // MusicBrainz tags
-	Relations  []MBRelation // MusicBrainz artist relations
+	SpotifyID string       // Spotify Artist ID
+	MBID      string       // MusicBrainz Artist ID
+	Name      string       // Artist name
+	Genres    []string     // Spotify genres
+	Tags      []MBTag      // MusicBrainz tags
+	Relations []MBRelation // MusicBrainz artist relations
 }

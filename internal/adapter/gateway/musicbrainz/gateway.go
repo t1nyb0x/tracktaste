@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/t1nyb0x/tracktaste/internal/domain"
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -49,12 +50,12 @@ type rawISRCResponse struct {
 
 // rawRecording represents a recording from MusicBrainz.
 type rawRecording struct {
-	ID            string      `json:"id"` // MBID
-	Title         string      `json:"title"`
-	ArtistCredit  []rawArtist `json:"artist-credit"`
-	Tags          []rawTag    `json:"tags"`
-	ISRCs         []string    `json:"isrcs"`
-	Disambiguation string     `json:"disambiguation"`
+	ID             string      `json:"id"` // MBID
+	Title          string      `json:"title"`
+	ArtistCredit   []rawArtist `json:"artist-credit"`
+	Tags           []rawTag    `json:"tags"`
+	ISRCs          []string    `json:"isrcs"`
+	Disambiguation string      `json:"disambiguation"`
 }
 
 // rawArtist represents an artist in MusicBrainz response.
@@ -309,9 +310,9 @@ func (g *Gateway) convertArtist(raw *rawArtistResponse) *domain.MBArtist {
 
 // rawBrowseRecordingsResponse represents the response from browse recordings.
 type rawBrowseRecordingsResponse struct {
-	RecordingCount int            `json:"recording-count"`
-	RecordingOffset int           `json:"recording-offset"`
-	Recordings     []rawRecording `json:"recordings"`
+	RecordingCount  int            `json:"recording-count"`
+	RecordingOffset int            `json:"recording-offset"`
+	Recordings      []rawRecording `json:"recordings"`
 }
 
 // GetArtistRecordings retrieves recordings by an artist (same artist's other tracks).

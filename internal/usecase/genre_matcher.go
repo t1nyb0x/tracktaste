@@ -88,10 +88,10 @@ var genreToGroup map[string]GenreGroup
 // relatedGroups defines which genre groups are considered related.
 // More restrictive: only closely related genres get bonus.
 var relatedGroups = map[GenreGroup][]GenreGroup{
-	GenreGroupOtaku: {GenreGroupRock},          // Anime rock is common; J-POP/K-POP are NOT related
-	GenreGroupJPop:  {GenreGroupIdol},          // J-POP and Idol overlap
-	GenreGroupRock:  {GenreGroupOtaku},         // Rock and anime rock overlap
-	GenreGroupKPop:  {GenreGroupIdol},          // K-POP and Idol overlap
+	GenreGroupOtaku: {GenreGroupRock},  // Anime rock is common; J-POP/K-POP are NOT related
+	GenreGroupJPop:  {GenreGroupIdol},  // J-POP and Idol overlap
+	GenreGroupRock:  {GenreGroupOtaku}, // Rock and anime rock overlap
+	GenreGroupKPop:  {GenreGroupIdol},  // K-POP and Idol overlap
 	GenreGroupIdol:  {GenreGroupJPop, GenreGroupKPop},
 }
 

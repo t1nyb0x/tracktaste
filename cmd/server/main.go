@@ -29,12 +29,12 @@ import (
 )
 
 type config struct {
-	httpAddr         string
-	spotifyID        string
-	spotifySecret    string
-	kkboxID          string
-	kkboxSecret      string
-	lastfmAPIKey     string
+	httpAddr          string
+	spotifyID         string
+	spotifySecret     string
+	kkboxID           string
+	kkboxSecret       string
+	lastfmAPIKey      string
 	ytmusicSidecarURL string
 }
 
@@ -56,12 +56,12 @@ func loadConfig() (*config, error) {
 	}
 
 	cfg := &config{
-		httpAddr:         getEnv("HTTP_ADDR", ":8080"),
-		spotifyID:        os.Getenv("SPOTIFY_CLIENT_ID"),
-		spotifySecret:    os.Getenv("SPOTIFY_CLIENT_SECRET"),
-		kkboxID:          os.Getenv("KKBOX_ID"),
-		kkboxSecret:      os.Getenv("KKBOX_SECRET"),
-		lastfmAPIKey:     os.Getenv("LASTFM_API_KEY"),
+		httpAddr:          getEnv("HTTP_ADDR", ":8080"),
+		spotifyID:         os.Getenv("SPOTIFY_CLIENT_ID"),
+		spotifySecret:     os.Getenv("SPOTIFY_CLIENT_SECRET"),
+		kkboxID:           os.Getenv("KKBOX_ID"),
+		kkboxSecret:       os.Getenv("KKBOX_SECRET"),
+		lastfmAPIKey:      os.Getenv("LASTFM_API_KEY"),
 		ytmusicSidecarURL: os.Getenv("YTMUSIC_SIDECAR_URL"),
 	}
 
@@ -113,7 +113,7 @@ func main() {
 
 	// Create recommend use case with optional APIs
 	var recommendUC *usecasev2.RecommendUseCase
-	
+
 	// Initialize optional gateways
 	var lastfmGW *lastfm.Gateway
 	if cfg.lastfmAPIKey != "" {

@@ -116,9 +116,9 @@ func (g *Gateway) SearchTrack(ctx context.Context, title, artist string) (*domai
 	}
 
 	// Build search query
-	query := fmt.Sprintf("track:\"%s\"", title)
+	query := fmt.Sprintf("track:%q", title)
 	if artist != "" {
-		query += fmt.Sprintf(" artist:\"%s\"", artist)
+		query += fmt.Sprintf(" artist:%q", artist)
 	}
 
 	endpoint := fmt.Sprintf("%s/search/track?q=%s", apiBaseURL, url.QueryEscape(query))

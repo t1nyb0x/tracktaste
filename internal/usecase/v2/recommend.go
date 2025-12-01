@@ -287,6 +287,9 @@ func (uc *RecommendUseCase) mergeTags(mbTags, spotifyGenres []string) []string {
 }
 
 // collectCandidatesV2 collects candidate tracks from KKBOX.
+// Deprecated: Use collectCandidatesMultiSource instead.
+//
+//nolint:unused // kept for potential future use or reference
 func (uc *RecommendUseCase) collectCandidatesV2(
 	ctx context.Context,
 	seedTrack *domain.Track,
@@ -810,6 +813,9 @@ func (uc *RecommendUseCase) filterByGenre(
 }
 
 // getCandidateFeatures retrieves features for candidate tracks (legacy, kept for compatibility).
+// Deprecated: Use getCandidateFeaturesParallel instead.
+//
+//nolint:unused // kept for potential future use or reference
 func (uc *RecommendUseCase) getCandidateFeatures(
 	ctx context.Context,
 	candidates []domain.Track,

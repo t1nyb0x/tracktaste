@@ -136,7 +136,9 @@ func convertRecommendResult(result *domain.RecommendResult) recommendResponse {
 
 	var seedFeatures *audioFeaturesResult
 	// Support both old AudioFeatures and new TrackFeatures
+	//nolint:staticcheck // backward compatibility
 	if result.SeedAudioFeatures != nil {
+		//nolint:staticcheck // backward compatibility
 		seedFeatures = &audioFeaturesResult{
 			Tempo:        result.SeedAudioFeatures.Tempo,
 			Energy:       result.SeedAudioFeatures.Energy,
@@ -184,7 +186,9 @@ func convertRecommendResult(result *domain.RecommendResult) recommendResponse {
 
 		var features *audioFeaturesResult
 		// Support both old AudioFeatures and new TrackFeatures
+		//nolint:staticcheck // backward compatibility
 		if rt.AudioFeatures != nil {
+			//nolint:staticcheck // backward compatibility
 			features = &audioFeaturesResult{
 				Tempo:        rt.AudioFeatures.Tempo,
 				Energy:       rt.AudioFeatures.Energy,
