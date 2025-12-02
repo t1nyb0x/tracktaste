@@ -49,9 +49,13 @@ tracktaste/
     │   │   ├── recommend.go        # RecommendUseCase (Spotify Audio Features)
     │   │   └── similarity.go       # SimilarityCalculator
     │   │
-    │   └── v2/                      # V2 ユースケース
-    │       ├── recommend.go        # RecommendUseCase (マルチソースレコメンド)
-    │       └── similarity.go       # SimilarityCalculatorV2
+│   │   └── v2/                      # V2 ユースケース
+│       ├── recommend.go        # RecommendUseCase (マルチソースレコメンド)
+│       │   ├── searchSpotifyWithFallback()  # Spotify検索フォールバック
+│       │   ├── sanitizeSearchQuery()        # クエリサニタイズ
+│       │   ├── simplifyTrackName()          # 曲名簡素化
+│       │   └── fuzzyMatchArtist()           # アーティスト曖昧マッチ
+│       └── similarity.go       # SimilarityCalculatorV2
     │
     ├── adapter/                     # アダプター層（最も外側）
     │   ├── gateway/                # Secondary Adapters（外部API実装）
@@ -251,8 +255,15 @@ HTTP Request
 │    │   ├── KKBOXAPI.GetRecommendedTracks()  (30件)                          │
 │    │   ├── LastFMAPI.GetSimilarTracks()     (30件) [optional]               │
 │    │   ├── MusicBrainzAPI.GetArtistRecordings() (20件)                      │
-│    │   └── YouTubeMusicAPI.Search()         (25件) [optional, sidecar]      │
+│    │   └── YouTubeMusicAPI.SearchTracks()   (25件) [optional, sidecar]      │
 │    ├── 重複除去（ISRC/name+artist）                                          │
+│    ├── Spotify検索による候補情報補完:                                        │
+│    │   ├── ISRC持ち → SearchByISRC()                                        │
+│    │   └── 名前のみ → searchSpotifyWithFallback() ※4段階フォールバック      │
+│    │       ├── 1. 厳密検索 (track:xxx artist:yyy)                           │
+│    │       ├── 2. 簡素化曲名で検索                                           │
+│    │       ├── 3. フリーテキスト検索                                         │
+│    │       └── 4. 簡素化フリーテキスト検索                                   │
 │    ├── 候補の特徴量並列取得（Deezer/MusicBrainz）                            │
 │    ├── ジャンルフィルタリング（アニソン保護等）                               │
 │    ├── SimilarityCalculatorV2 で類似度計算                                   │
