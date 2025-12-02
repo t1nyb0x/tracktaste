@@ -478,3 +478,138 @@ func TestRecommendUseCase_GetRecommendations_KKBOXTrackNotFound(t *testing.T) {
 		t.Errorf("expected 0 items when KKBOX returns nil, got %d", len(result.Items))
 	}
 }
+
+func TestSanitizeSearchQuery(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "removes Japanese brackets",
+			input: "聖戦と死神 第1部「銀色の死神」",
+			want:  "聖戦と死神 第1部 銀色の死神",
+		},
+		{
+			name:  "removes parentheses",
+			input: "Track (Remix)",
+			want:  "Track Remix",
+		},
+		{
+			name:  "removes special symbols",
+			input: "Track～Version",
+			want:  "Track Version",
+		},
+		{
+			name:  "collapses multiple spaces",
+			input: "Track    Name",
+			want:  "Track Name",
+		},
+		{
+			name:  "preserves normal text",
+			input: "Normal Track Name",
+			want:  "Normal Track Name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeSearchQuery(tt.input)
+			if got != tt.want {
+				t.Errorf("sanitizeSearchQuery(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSimplifyTrackName(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "removes parenthesized suffix",
+			input: "Track Name (feat. Artist)",
+			want:  "Track Name",
+		},
+		{
+			name:  "removes Japanese bracketed suffix",
+			input: "Chronicle 2nd 聖戦と死神 第1部「銀色の死神」 ～戦場を駈ける者～",
+			want:  "Chronicle 2nd 聖戦と死神 第1部 銀色の死神 戦場を駈ける者",
+		},
+		{
+			name:  "removes remix indicator",
+			input: "Track Name - Remix Version",
+			want:  "Track Name",
+		},
+		{
+			name:  "preserves short names",
+			input: "AB",
+			want:  "AB",
+		},
+		{
+			name:  "handles normal names",
+			input: "Normal Track",
+			want:  "Normal Track",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := simplifyTrackName(tt.input)
+			if got != tt.want {
+				t.Errorf("simplifyTrackName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFuzzyMatchArtist(t *testing.T) {
+	tests := []struct {
+		name string
+		a    string
+		b    string
+		want bool
+	}{
+		{
+			name: "exact match",
+			a:    "Artist Name",
+			b:    "Artist Name",
+			want: true,
+		},
+		{
+			name: "case insensitive",
+			a:    "ARTIST NAME",
+			b:    "artist name",
+			want: true,
+		},
+		{
+			name: "one contains other",
+			a:    "The Artist",
+			b:    "Artist",
+			want: true,
+		},
+		{
+			name: "ampersand normalization",
+			a:    "Artist & Band",
+			b:    "Artist and Band",
+			want: true,
+		},
+		{
+			name: "different artists",
+			a:    "Artist A",
+			b:    "Artist B",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fuzzyMatchArtist(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("fuzzyMatchArtist(%q, %q) = %v, want %v", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
+}

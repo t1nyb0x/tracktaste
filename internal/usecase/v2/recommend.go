@@ -5,6 +5,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -689,14 +690,11 @@ func (uc *RecommendUseCase) enrichCandidatesParallel(
 					sem <- struct{}{}
 					defer func() { <-sem }()
 
-					query := fmt.Sprintf("track:%s artist:%s", candidate.Name, candidate.Artists[0].Name)
-					tracks, err := uc.spotifyAPI.SearchTracks(ctx, query)
-					if err != nil || len(tracks) == 0 {
-						logger.Debug("RecommendV2", fmt.Sprintf("Spotify検索失敗: %s - %s", candidate.Artists[0].Name, candidate.Name))
+					track := uc.searchSpotifyWithFallback(ctx, candidate.Name, candidate.Artists[0].Name)
+					if track == nil {
+						logger.Debug("RecommendV2", fmt.Sprintf("Spotifyで見つかりませんでした: %s - %s", candidate.Artists[0].Name, candidate.Name))
 						return
 					}
-
-					track := &tracks[0]
 					// Use the found track's ISRC as key
 					if track.ISRC != nil && *track.ISRC != "" {
 						mu.Lock()
@@ -1053,4 +1051,110 @@ func (uc *RecommendUseCase) detectSeriesMatch(seedName, candidateName string, re
 	}
 
 	return 1.0, reasons
+}
+
+// searchSpotifyWithFallback searches Spotify for a track with multiple fallback strategies.
+// It tries progressively simpler queries if exact search fails.
+func (uc *RecommendUseCase) searchSpotifyWithFallback(ctx context.Context, trackName, artistName string) *domain.Track {
+	// Strategy 1: Exact search with track: and artist: filters
+	sanitizedTrack := sanitizeSearchQuery(trackName)
+	sanitizedArtist := sanitizeSearchQuery(artistName)
+
+	query := fmt.Sprintf("track:%s artist:%s", sanitizedTrack, sanitizedArtist)
+	tracks, err := uc.spotifyAPI.SearchTracks(ctx, query)
+	if err == nil && len(tracks) > 0 {
+		return &tracks[0]
+	}
+
+	// Strategy 2: Simplified track name (remove parentheses, brackets content)
+	simplifiedTrack := simplifyTrackName(trackName)
+	if simplifiedTrack != sanitizedTrack {
+		query = fmt.Sprintf("track:%s artist:%s", simplifiedTrack, sanitizedArtist)
+		tracks, err = uc.spotifyAPI.SearchTracks(ctx, query)
+		if err == nil && len(tracks) > 0 {
+			return &tracks[0]
+		}
+	}
+
+	// Strategy 3: Free text search (artist + track name)
+	query = fmt.Sprintf("%s %s", sanitizedArtist, sanitizedTrack)
+	tracks, err = uc.spotifyAPI.SearchTracks(ctx, query)
+	if err == nil && len(tracks) > 0 {
+		// Verify the result matches the artist (fuzzy match)
+		for _, t := range tracks {
+			if len(t.Artists) > 0 && fuzzyMatchArtist(t.Artists[0].Name, artistName) {
+				return &t
+			}
+		}
+		// Return first result if no exact artist match
+		return &tracks[0]
+	}
+
+	// Strategy 4: Simplified free text search
+	if simplifiedTrack != sanitizedTrack {
+		query = fmt.Sprintf("%s %s", sanitizedArtist, simplifiedTrack)
+		tracks, err = uc.spotifyAPI.SearchTracks(ctx, query)
+		if err == nil && len(tracks) > 0 {
+			return &tracks[0]
+		}
+	}
+
+	return nil
+}
+
+// sanitizeSearchQuery removes special characters that may cause search issues.
+var specialCharsRegex = regexp.MustCompile(`[～〜「」『』【】（）()[\]<>《》、。・"'：:；;！!？?＆&＃#＄$％%＠@＊*＋+＝=｜|＼\\／/]`)
+
+func sanitizeSearchQuery(s string) string {
+	// Remove special characters
+	s = specialCharsRegex.ReplaceAllString(s, " ")
+	// Collapse multiple spaces
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
+	// Trim
+	return strings.TrimSpace(s)
+}
+
+// simplifyTrackName removes common suffixes like (feat. ...), [Remix], etc.
+var subtitlePatterns = []*regexp.Regexp{
+	regexp.MustCompile(`\s*[\(（【\[].+$`),               // Remove everything after opening bracket
+	regexp.MustCompile(`\s*[-－ー]\s*.+$`),               // Remove everything after dash (common in Japanese titles)
+	regexp.MustCompile(`(?i)\s*(feat\.?|ft\.?).+$`),    // Remove feat. and everything after
+	regexp.MustCompile(`(?i)\s*(remix|ver\.|version)`), // Remove remix/version indicators
+}
+
+func simplifyTrackName(name string) string {
+	result := name
+	for _, pattern := range subtitlePatterns {
+		simplified := pattern.ReplaceAllString(result, "")
+		if simplified != "" && len(simplified) >= 3 {
+			result = simplified
+		}
+	}
+	return sanitizeSearchQuery(result)
+}
+
+// fuzzyMatchArtist checks if two artist names are similar.
+func fuzzyMatchArtist(a, b string) bool {
+	a = strings.ToLower(strings.TrimSpace(a))
+	b = strings.ToLower(strings.TrimSpace(b))
+
+	if a == b {
+		return true
+	}
+
+	// Check if one contains the other
+	if strings.Contains(a, b) || strings.Contains(b, a) {
+		return true
+	}
+
+	// Remove common suffixes/prefixes for comparison
+	normalize := func(s string) string {
+		s = strings.ReplaceAll(s, "the ", "")
+		s = strings.ReplaceAll(s, " the", "")
+		s = strings.ReplaceAll(s, "&", "and")
+		s = strings.ReplaceAll(s, "＆", "and")
+		return strings.TrimSpace(s)
+	}
+
+	return normalize(a) == normalize(b)
 }
