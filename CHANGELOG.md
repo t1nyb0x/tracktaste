@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/t1nyb0x/tracktaste/compare/v2.0.1...v2.1.0) (2025-12-02)
+
+
+### Features
+
+* ヘルスチェックのレスポンスにアプリケーション情報を含めた ([d03509d](https://github.com/t1nyb0x/tracktaste/commit/d03509d1d05e280c19ea6bdb4b7e6db507afd33f))
+
 ## [2.0.1](https://github.com/t1nyb0x/tracktaste/compare/v2.0.0...v2.0.1) (2025-12-02)
 
 
