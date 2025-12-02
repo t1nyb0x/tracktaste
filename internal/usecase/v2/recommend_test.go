@@ -136,8 +136,8 @@ func (m *mockSpotifyAPI) GetArtistGenresBatch(ctx context.Context, artistIDs []s
 }
 
 type mockKKBOXAPI struct {
-	tracks         map[string]*external.KKBOXTrackInfo
-	recommended    []external.KKBOXTrackInfo
+	tracks          map[string]*external.KKBOXTrackInfo
+	recommended     []external.KKBOXTrackInfo
 	returnNilOnMiss bool // if true, return (nil, nil) instead of (nil, error) when track not found
 }
 
@@ -421,7 +421,7 @@ func TestRecommendUseCase_GetRecommendations_KKBOXTrackNotFound(t *testing.T) {
 
 	// KKBOX returns nil for this ISRC (not found in KKBOX catalog)
 	kkboxAPI := &mockKKBOXAPI{
-		tracks:         map[string]*external.KKBOXTrackInfo{},
+		tracks:          map[string]*external.KKBOXTrackInfo{},
 		returnNilOnMiss: true, // Simulate real KKBOX behavior: returns (nil, nil) when not found
 	}
 
