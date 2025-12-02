@@ -19,12 +19,13 @@ type Handlers struct {
 	Artist    *handler.ArtistHandler
 	Album     *handler.AlbumHandler
 	Recommend *handler.RecommendHandler
+	Health    *handler.HealthHandler
 }
 
 func New(cfg Config, h Handlers) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.Recoverer, middleware.Timeout(15*time.Second), middleware.Logger)
-	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) })
+	r.Get("/healthz", h.Health.Check)
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/track/fetch", h.Track.FetchByURL)

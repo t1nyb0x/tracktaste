@@ -303,9 +303,39 @@ recommendUC := usecasev2.NewRecommendUseCaseFull(
 // 4. Handlers (usecase に依存)
 trackHandler := handler.NewTrackHandler(trackUC, similarUC)
 recommendHandler := handler.NewRecommendHandler(recommendUC)
+healthHandler := handler.NewHealthHandler(enabledServices)
 
 // 5. Server
 server.New(config, handlers)
+```
+
+## ヘルスチェック
+
+`/healthz` エンドポイントは以下の情報を提供:
+
+| 項目       | 内容                                         |
+| ---------- | -------------------------------------------- |
+| status     | サーバー状態 (`healthy`)                     |
+| version    | ビルド時に設定されたバージョン               |
+| build_time | ビルド日時（ISO 8601）                       |
+| git_commit | Git コミットハッシュ                         |
+| uptime     | サーバー起動からの経過時間                   |
+| runtime    | Go バージョン、ゴルーチン数、CPU 数、OS/Arch |
+| services   | 各外部サービスの有効/無効状態                |
+
+### ビルド時のバージョン設定
+
+```bash
+go build -ldflags="-X main.version=1.0.0 \
+  -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  -X main.gitCommit=$(git rev-parse --short HEAD)" \
+  -o server ./cmd/server/...
+```
+
+Docker Compose では環境変数で設定:
+
+```bash
+VERSION=1.0.0 BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) GIT_COMMIT=$(git rev-parse --short HEAD) docker compose up -d --build
 ```
 
 ## Clean Architecture の利点
@@ -351,12 +381,12 @@ go run ./cmd/server/...
 
 ## API エンドポイント
 
-| Method | Path                | Handler                               |
-| ------ | ------------------- | ------------------------------------- |
-| GET    | /healthz            | Health check                          |
-| GET    | /v1/track/fetch     | TrackHandler.FetchByURL               |
-| GET    | /v1/track/search    | TrackHandler.Search                   |
-| GET    | /v1/track/similar   | TrackHandler.FetchSimilar             |
-| GET    | /v2/track/recommend | RecommendHandler.FetchRecommendations |
-| GET    | /v1/artist/fetch    | ArtistHandler.FetchByURL              |
-| GET    | /v1/album/fetch     | AlbumHandler.FetchByURL               |
+| Method | Path                | Handler                               | 説明                                       |
+| ------ | ------------------- | ------------------------------------- | ------------------------------------------ |
+| GET    | /healthz            | HealthHandler.Check                   | ヘルスチェック（バージョン・サービス状態） |
+| GET    | /v1/track/fetch     | TrackHandler.FetchByURL               | Spotify URL からトラック情報取得           |
+| GET    | /v1/track/search    | TrackHandler.Search                   | キーワードでトラック検索                   |
+| GET    | /v1/track/similar   | TrackHandler.FetchSimilar             | KKBOX ベースの類似トラック取得             |
+| GET    | /v2/track/recommend | RecommendHandler.FetchRecommendations | マルチソースレコメンド取得                 |
+| GET    | /v1/artist/fetch    | ArtistHandler.FetchByURL              | Spotify URL からアーティスト情報取得       |
+| GET    | /v1/album/fetch     | AlbumHandler.FetchByURL               | Spotify URL からアルバム情報取得           |

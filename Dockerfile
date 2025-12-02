@@ -5,6 +5,11 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
+# Build arguments for version info
+ARG VERSION=dev
+ARG BUILD_TIME=unknown
+ARG GIT_COMMIT=unknown
+
 # Install ca-certificates for HTTPS requests
 RUN apk add --no-cache ca-certificates
 
@@ -15,8 +20,13 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server ./cmd/server/...
+# Build the binary with version info
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w \
+    -X main.version=${VERSION} \
+    -X main.buildTime=${BUILD_TIME} \
+    -X main.gitCommit=${GIT_COMMIT}" \
+    -o /server ./cmd/server/...
 
 # ==============================================================================
 # Production stage

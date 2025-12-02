@@ -97,6 +97,12 @@ air
 # 開発環境
 docker compose up -d
 
+# バージョン情報付きでビルド
+VERSION=1.0.0 \
+BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+GIT_COMMIT=$(git rev-parse --short HEAD) \
+docker compose up -d --build
+
 # 本番環境
 docker compose -f docker-compose.prod.yml up -d
 ```
@@ -191,6 +197,51 @@ golangci-lint run
 ```
 GET /healthz
 ```
+
+サーバーの状態、バージョン情報、接続サービスの状態を返します。
+
+**レスポンス例:**
+
+```json
+{
+  "status": 200,
+  "result": {
+    "status": "healthy",
+    "version": "1.0.0",
+    "build_time": "2025-12-02T12:00:00Z",
+    "git_commit": "abc1234",
+    "uptime": "5m30s",
+    "runtime": {
+      "go_version": "go1.24.10",
+      "num_goroutine": 5,
+      "num_cpu": 8,
+      "goos": "linux",
+      "goarch": "amd64"
+    },
+    "services": {
+      "spotify": "enabled",
+      "kkbox": "enabled",
+      "deezer": "enabled",
+      "musicbrainz": "enabled",
+      "lastfm": "enabled",
+      "youtube_music": "enabled",
+      "redis": "enabled"
+    }
+  }
+}
+```
+
+| フィールド              | 説明                           |
+| ----------------------- | ------------------------------ |
+| `status`                | サーバー状態 (`healthy`)       |
+| `version`               | アプリケーションバージョン     |
+| `build_time`            | ビルド日時（ISO 8601）         |
+| `git_commit`            | Git コミットハッシュ（短縮形） |
+| `uptime`                | サーバー起動からの経過時間     |
+| `runtime.go_version`    | Go ランタイムバージョン        |
+| `runtime.num_goroutine` | 現在のゴルーチン数             |
+| `runtime.num_cpu`       | 利用可能な CPU 数              |
+| `services.*`            | 各外部サービスの有効/無効状態  |
 
 ### トラック
 
