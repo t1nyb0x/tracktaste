@@ -346,7 +346,7 @@ func (uc *RecommendUseCase) collectCandidatesV2(
 		})
 	}
 
-	// Keep up to kkboxCandidateLimitV2 (50) - will be filtered by genre later
+	// Keep up to kkboxCandidateLimitV2 (30) - will be filtered by genre later
 	if len(candidates) > kkboxCandidateLimitV2 {
 		candidates = candidates[:kkboxCandidateLimitV2]
 	}
