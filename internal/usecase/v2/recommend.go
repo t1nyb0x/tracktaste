@@ -5,6 +5,7 @@ package v2
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -129,6 +130,7 @@ func (uc *RecommendUseCase) GetRecommendations(
 	logger.Info("RecommendV2", fmt.Sprintf("候補トラック数: %d", len(candidates)))
 
 	if len(candidates) == 0 {
+		logger.Info("RecommendV2", "レコメンドできる曲がありませんでした")
 		return &domain.RecommendResult{
 			SeedTrack:    *track,
 			SeedFeatures: seedFeatures,
@@ -305,6 +307,11 @@ func (uc *RecommendUseCase) collectCandidatesV2(
 		logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
 		return nil
 	}
+	if kkboxTrack == nil {
+		// Track not found in KKBOX catalog (not an error)
+		logger.Info("RecommendV2", "KKBOX: 曲が見つかりませんでした")
+		return nil
+	}
 
 	similarTracks, err := uc.kkboxAPI.GetRecommendedTracks(ctx, kkboxTrack.ID)
 	if err != nil {
@@ -340,7 +347,7 @@ func (uc *RecommendUseCase) collectCandidatesV2(
 		})
 	}
 
-	// Keep up to kkboxCandidateLimitV2 (50) - will be filtered by genre later
+	// Keep up to kkboxCandidateLimitV2 (30) - will be filtered by genre later
 	if len(candidates) > kkboxCandidateLimitV2 {
 		candidates = candidates[:kkboxCandidateLimitV2]
 	}
@@ -450,6 +457,11 @@ func (uc *RecommendUseCase) collectFromKKBOX(ctx context.Context, seedTrack *dom
 		logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
 		return nil
 	}
+	if kkboxTrack == nil {
+		// Track not found in KKBOX catalog (not an error)
+		logger.Info("RecommendV2", "KKBOX: 曲が見つかりませんでした")
+		return nil
+	}
 
 	similarTracks, err := uc.kkboxAPI.GetRecommendedTracks(ctx, kkboxTrack.ID)
 	if err != nil {
@@ -494,6 +506,10 @@ func (uc *RecommendUseCase) collectFromLastFM(ctx context.Context, seedTrack *do
 		logger.Warning("RecommendV2", "Last.fm類似曲取得エラー: "+err.Error())
 		return nil
 	}
+	if len(similarTracks) == 0 {
+		logger.Info("RecommendV2", "Last.fm: 類似曲が見つかりませんでした")
+		return nil
+	}
 
 	// Convert to domain.Track (will be enriched with Spotify later)
 	candidates := make([]domain.Track, 0, len(similarTracks))
@@ -516,6 +532,10 @@ func (uc *RecommendUseCase) collectFromMusicBrainzArtist(ctx context.Context, ar
 	recordings, err := uc.musicBrainzAPI.GetArtistRecordings(ctx, artistMBID, mbArtistCandidateLimitV2)
 	if err != nil {
 		logger.Warning("RecommendV2", "MusicBrainzアーティスト曲取得エラー: "+err.Error())
+		return nil
+	}
+	if len(recordings) == 0 {
+		logger.Info("RecommendV2", "MusicBrainz: アーティストの曲が見つかりませんでした")
 		return nil
 	}
 
@@ -574,6 +594,10 @@ func (uc *RecommendUseCase) collectFromYouTubeMusic(ctx context.Context, seedTra
 	similarTracks, err := uc.ytmusicAPI.GetSimilarTracks(ctx, videoID, ytmusicCandidateLimitV2)
 	if err != nil {
 		logger.Warning("RecommendV2", "YouTube Music類似曲取得エラー: "+err.Error())
+		return nil
+	}
+	if len(similarTracks) == 0 {
+		logger.Info("RecommendV2", "YouTube Music: 類似曲が見つかりませんでした")
 		return nil
 	}
 
@@ -666,14 +690,11 @@ func (uc *RecommendUseCase) enrichCandidatesParallel(
 					sem <- struct{}{}
 					defer func() { <-sem }()
 
-					query := fmt.Sprintf("track:%s artist:%s", candidate.Name, candidate.Artists[0].Name)
-					tracks, err := uc.spotifyAPI.SearchTracks(ctx, query)
-					if err != nil || len(tracks) == 0 {
-						logger.Debug("RecommendV2", fmt.Sprintf("Spotify検索失敗: %s - %s", candidate.Artists[0].Name, candidate.Name))
+					track := uc.searchSpotifyWithFallback(ctx, candidate.Name, candidate.Artists[0].Name)
+					if track == nil {
+						logger.Debug("RecommendV2", fmt.Sprintf("Spotifyで見つかりませんでした: %s - %s", candidate.Artists[0].Name, candidate.Name))
 						return
 					}
-
-					track := &tracks[0]
 					// Use the found track's ISRC as key
 					if track.ISRC != nil && *track.ISRC != "" {
 						mu.Lock()
@@ -1030,4 +1051,110 @@ func (uc *RecommendUseCase) detectSeriesMatch(seedName, candidateName string, re
 	}
 
 	return 1.0, reasons
+}
+
+// searchSpotifyWithFallback searches Spotify for a track with multiple fallback strategies.
+// It tries progressively simpler queries if exact search fails.
+func (uc *RecommendUseCase) searchSpotifyWithFallback(ctx context.Context, trackName, artistName string) *domain.Track {
+	// Strategy 1: Exact search with track: and artist: filters
+	sanitizedTrack := sanitizeSearchQuery(trackName)
+	sanitizedArtist := sanitizeSearchQuery(artistName)
+
+	query := fmt.Sprintf("track:%s artist:%s", sanitizedTrack, sanitizedArtist)
+	tracks, err := uc.spotifyAPI.SearchTracks(ctx, query)
+	if err == nil && len(tracks) > 0 {
+		return &tracks[0]
+	}
+
+	// Strategy 2: Simplified track name (remove parentheses, brackets content)
+	simplifiedTrack := simplifyTrackName(trackName)
+	if simplifiedTrack != sanitizedTrack {
+		query = fmt.Sprintf("track:%s artist:%s", simplifiedTrack, sanitizedArtist)
+		tracks, err = uc.spotifyAPI.SearchTracks(ctx, query)
+		if err == nil && len(tracks) > 0 {
+			return &tracks[0]
+		}
+	}
+
+	// Strategy 3: Free text search (artist + track name)
+	query = fmt.Sprintf("%s %s", sanitizedArtist, sanitizedTrack)
+	tracks, err = uc.spotifyAPI.SearchTracks(ctx, query)
+	if err == nil && len(tracks) > 0 {
+		// Verify the result matches the artist (fuzzy match)
+		for _, t := range tracks {
+			if len(t.Artists) > 0 && fuzzyMatchArtist(t.Artists[0].Name, artistName) {
+				return &t
+			}
+		}
+		// Return first result if no exact artist match
+		return &tracks[0]
+	}
+
+	// Strategy 4: Simplified free text search
+	if simplifiedTrack != sanitizedTrack {
+		query = fmt.Sprintf("%s %s", sanitizedArtist, simplifiedTrack)
+		tracks, err = uc.spotifyAPI.SearchTracks(ctx, query)
+		if err == nil && len(tracks) > 0 {
+			return &tracks[0]
+		}
+	}
+
+	return nil
+}
+
+// sanitizeSearchQuery removes special characters that may cause search issues.
+var specialCharsRegex = regexp.MustCompile(`[～〜「」『』【】（）()[\]<>《》、。・"'：:；;！!？?＆&＃#＄$％%＠@＊*＋+＝=｜|＼\\／/]`)
+
+func sanitizeSearchQuery(s string) string {
+	// Remove special characters
+	s = specialCharsRegex.ReplaceAllString(s, " ")
+	// Collapse multiple spaces
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
+	// Trim
+	return strings.TrimSpace(s)
+}
+
+// simplifyTrackName removes common suffixes like (feat. ...), [Remix], etc.
+var subtitlePatterns = []*regexp.Regexp{
+	regexp.MustCompile(`\s*[\(（【\[].+$`),               // Remove everything after opening bracket
+	regexp.MustCompile(`\s*[-－ー]\s*.+$`),               // Remove everything after dash (common in Japanese titles)
+	regexp.MustCompile(`(?i)\s*(feat\.?|ft\.?).+$`),    // Remove feat. and everything after
+	regexp.MustCompile(`(?i)\s*(remix|ver\.|version)`), // Remove remix/version indicators
+}
+
+func simplifyTrackName(name string) string {
+	result := name
+	for _, pattern := range subtitlePatterns {
+		simplified := pattern.ReplaceAllString(result, "")
+		if simplified != "" && len(simplified) >= 3 {
+			result = simplified
+		}
+	}
+	return sanitizeSearchQuery(result)
+}
+
+// fuzzyMatchArtist checks if two artist names are similar.
+func fuzzyMatchArtist(a, b string) bool {
+	a = strings.ToLower(strings.TrimSpace(a))
+	b = strings.ToLower(strings.TrimSpace(b))
+
+	if a == b {
+		return true
+	}
+
+	// Check if one contains the other
+	if strings.Contains(a, b) || strings.Contains(b, a) {
+		return true
+	}
+
+	// Remove common suffixes/prefixes for comparison
+	normalize := func(s string) string {
+		s = strings.ReplaceAll(s, "the ", "")
+		s = strings.ReplaceAll(s, " the", "")
+		s = strings.ReplaceAll(s, "&", "and")
+		s = strings.ReplaceAll(s, "＆", "and")
+		return strings.TrimSpace(s)
+	}
+
+	return normalize(a) == normalize(b)
 }
