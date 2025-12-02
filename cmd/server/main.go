@@ -28,6 +28,13 @@ import (
 	"github.com/t1nyb0x/tracktaste/internal/util/logger"
 )
 
+// Build information (set via ldflags)
+var (
+	version   = "dev"
+	buildTime = "unknown"
+	gitCommit = "unknown"
+)
+
 type config struct {
 	httpAddr          string
 	spotifyID         string
@@ -83,9 +90,22 @@ func getEnv(key, def string) string {
 }
 
 func main() {
+	// Set version info for health check
+	handler.Version = version
+	handler.BuildTime = buildTime
+	handler.GitCommit = gitCommit
+
 	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Track enabled services for health check
+	enabledServices := handler.EnabledServices{
+		Spotify:     true, // Always required
+		KKBOX:       true, // Always required
+		Deezer:      true, // Always enabled (no auth required)
+		MusicBrainz: true, // Always enabled (no auth required)
 	}
 
 	// Initialize Redis (L2 cache)
@@ -95,6 +115,7 @@ func main() {
 	} else {
 		logger.Info("Main", "Redis connected")
 		redisRepo = redisGateway.NewTokenRepository()
+		enabledServices.Redis = true
 	}
 
 	// Create two-level cache (L1: memory, L2: Redis)
@@ -119,6 +140,7 @@ func main() {
 	if cfg.lastfmAPIKey != "" {
 		lastfmGW = lastfm.NewGateway(cfg.lastfmAPIKey)
 		logger.Info("Main", "Last.fm enabled")
+		enabledServices.LastFM = true
 	} else {
 		logger.Warning("Main", "Last.fm API key not set - running without Last.fm")
 	}
@@ -127,6 +149,7 @@ func main() {
 	if cfg.ytmusicSidecarURL != "" {
 		ytmusicGW = ytmusic.NewGateway(cfg.ytmusicSidecarURL)
 		logger.Info("Main", fmt.Sprintf("YouTube Music sidecar enabled: %s", cfg.ytmusicSidecarURL))
+		enabledServices.YouTubeMusic = true
 	} else {
 		logger.Warning("Main", "YouTube Music sidecar URL not set - running without YouTube Music")
 	}
@@ -142,13 +165,14 @@ func main() {
 	artistH := handler.NewArtistHandler(artistUC)
 	albumH := handler.NewAlbumHandler(albumUC)
 	recommendH := handler.NewRecommendHandler(recommendUC)
+	healthH := handler.NewHealthHandler(enabledServices)
 
 	srv := server.New(
 		server.Config{Addr: cfg.httpAddr},
-		server.Handlers{Track: trackH, Artist: artistH, Album: albumH, Recommend: recommendH},
+		server.Handlers{Track: trackH, Artist: artistH, Album: albumH, Recommend: recommendH, Health: healthH},
 	)
 
-	logger.Info("Main", fmt.Sprintf("Server starting on %s", cfg.httpAddr))
+	logger.Info("Main", fmt.Sprintf("Server starting on %s (version: %s)", cfg.httpAddr, version))
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
 
