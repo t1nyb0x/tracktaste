@@ -301,10 +301,12 @@ func (uc *RecommendUseCase) collectCandidatesV2(
 
 	// Get KKBOX recommendations
 	kkboxTrack, err := uc.kkboxAPI.SearchByISRC(ctx, *seedTrack.ISRC)
-	if err != nil || kkboxTrack == nil {
-		if err != nil {
-			logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
-		}
+	if err != nil {
+		logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
+		return nil
+	}
+	if kkboxTrack == nil {
+		// Track not found in KKBOX catalog (not an error)
 		return nil
 	}
 
@@ -448,10 +450,12 @@ func (uc *RecommendUseCase) collectFromKKBOX(ctx context.Context, seedTrack *dom
 	}
 
 	kkboxTrack, err := uc.kkboxAPI.SearchByISRC(ctx, *seedTrack.ISRC)
-	if err != nil || kkboxTrack == nil {
-		if err != nil {
-			logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
-		}
+	if err != nil {
+		logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
+		return nil
+	}
+	if kkboxTrack == nil {
+		// Track not found in KKBOX catalog (not an error)
 		return nil
 	}
 
