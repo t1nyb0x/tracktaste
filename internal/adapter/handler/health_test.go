@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHealthHandler_Check(t *testing.T) {
@@ -151,5 +152,141 @@ func TestHealthResponse_JSON(t *testing.T) {
 	contentType := w.Header().Get("Content-Type")
 	if !strings.Contains(contentType, "application/json") {
 		t.Errorf("Content-Type = %s, want application/json", contentType)
+	}
+}
+
+func TestHealthHandler_VersionInfo(t *testing.T) {
+	// テスト用にバージョン情報を設定
+	originalVersion := Version
+	originalBuildTime := BuildTime
+	originalGitCommit := GitCommit
+	defer func() {
+		Version = originalVersion
+		BuildTime = originalBuildTime
+		GitCommit = originalGitCommit
+	}()
+
+	Version = "1.0.0"
+	BuildTime = "2025-12-02T12:00:00Z"
+	GitCommit = "abc1234"
+
+	h := NewHealthHandler(EnabledServices{})
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+
+	h.Check(w, req)
+
+	var resp successResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	result := resp.Result.(map[string]interface{})
+
+	if result["version"] != "1.0.0" {
+		t.Errorf("version = %v, want 1.0.0", result["version"])
+	}
+	if result["build_time"] != "2025-12-02T12:00:00Z" {
+		t.Errorf("build_time = %v, want 2025-12-02T12:00:00Z", result["build_time"])
+	}
+	if result["git_commit"] != "abc1234" {
+		t.Errorf("git_commit = %v, want abc1234", result["git_commit"])
+	}
+}
+
+func TestHealthHandler_Uptime(t *testing.T) {
+	h := NewHealthHandler(EnabledServices{})
+
+	// 少し待ってからリクエスト
+	time.Sleep(10 * time.Millisecond)
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+
+	h.Check(w, req)
+
+	var resp successResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	result := resp.Result.(map[string]interface{})
+	uptime := result["uptime"].(string)
+
+	// uptimeが空でないことを確認
+	if uptime == "" {
+		t.Error("uptime should not be empty")
+	}
+}
+
+func TestHealthHandler_RuntimeInfo(t *testing.T) {
+	h := NewHealthHandler(EnabledServices{})
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+
+	h.Check(w, req)
+
+	var resp successResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	result := resp.Result.(map[string]interface{})
+	runtime := result["runtime"].(map[string]interface{})
+
+	// Go versionは "go" で始まる
+	goVersion := runtime["go_version"].(string)
+	if !strings.HasPrefix(goVersion, "go") {
+		t.Errorf("go_version = %s, should start with 'go'", goVersion)
+	}
+
+	// num_goroutineは1以上
+	numGoroutine := runtime["num_goroutine"].(float64)
+	if numGoroutine < 1 {
+		t.Errorf("num_goroutine = %v, should be >= 1", numGoroutine)
+	}
+
+	// num_cpuは1以上
+	numCPU := runtime["num_cpu"].(float64)
+	if numCPU < 1 {
+		t.Errorf("num_cpu = %v, should be >= 1", numCPU)
+	}
+
+	// goosとgoarchは空でない
+	if runtime["goos"] == "" {
+		t.Error("goos should not be empty")
+	}
+	if runtime["goarch"] == "" {
+		t.Error("goarch should not be empty")
+	}
+}
+
+func TestNewHealthHandler(t *testing.T) {
+	services := EnabledServices{
+		Spotify:      true,
+		KKBOX:        true,
+		Deezer:       false,
+		MusicBrainz:  false,
+		LastFM:       true,
+		YouTubeMusic: false,
+		Redis:        true,
+	}
+
+	h := NewHealthHandler(services)
+
+	if h == nil {
+		t.Fatal("NewHealthHandler returned nil")
+	}
+
+	if h.enabledServices.Spotify != true {
+		t.Error("Spotify should be enabled")
+	}
+	if h.enabledServices.Deezer != false {
+		t.Error("Deezer should be disabled")
+	}
+	if h.startTime.IsZero() {
+		t.Error("startTime should be set")
 	}
 }
