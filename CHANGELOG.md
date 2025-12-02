@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1](https://github.com/t1nyb0x/tracktaste/compare/v2.0.0...v2.0.1) (2025-12-02)
+
+
+### Bug Fixes
+
+* 検索結果が見つからない場合のログ出力を改善 ([4d80f9e](https://github.com/t1nyb0x/tracktaste/commit/4d80f9ef9fa7c92cd3daab2c892f4eaaa00e3213))
+* 検索結果が見つからない場合のログ出力を改善 ([5eec1c0](https://github.com/t1nyb0x/tracktaste/commit/5eec1c0828709aa81edecb6d436f04fb151acef7))
+
 ## [2.0.0](https://github.com/t1nyb0x/tracktaste/compare/v1.4.0...v2.0.0) (2025-12-01)
 
 
