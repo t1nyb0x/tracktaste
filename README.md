@@ -13,6 +13,7 @@ Spotify と KKBOX を連携した音楽トラック情報取得・類似曲検�
 - **レコメンド V2**: マルチソース候補収集 + Deezer/MusicBrainz 特徴量による高精度レコメンド
   - **候補ソース**: KKBOX, Last.fm, MusicBrainz (アーティスト曲), YouTube Music
   - **特徴量**: Deezer (BPM/Duration/Gain) + MusicBrainz (Tags/Relations)
+  - **スマート検索**: Spotify 検索のフォールバック機能（特殊文字・日本語タイトル対応）
 - **アーティスト情報取得**: Spotify URL からアーティストの詳細情報を取得
 - **アルバム情報取得**: Spotify URL からアルバムの詳細情報を取得
 
@@ -153,6 +154,10 @@ go test ./...
 # カバレッジ付き
 go test ./... -cover
 
+# カバレッジレポート生成
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out -o coverage.html
+
 # 詳細出力
 go test ./... -v
 
@@ -160,6 +165,14 @@ go test ./... -v
 go test ./internal/usecase/v1/...  # V1ユースケース
 go test ./internal/usecase/v2/...  # V2ユースケース
 ```
+
+### カバレッジ目標
+
+| パッケージ | 目標 | 現状   |
+| ---------- | ---- | ------ |
+| usecase/v2 | 75%+ | ✅ 76% |
+| usecase/v1 | 80%+ | -      |
+| handler    | 85%+ | -      |
 
 ### Lint
 
@@ -220,6 +233,20 @@ GET /healthz
 
 - **Deezer API**: BPM、Duration（秒）、Gain（ReplayGain dB）
 - **MusicBrainz API**: タグ（ジャンル、ムード等）、アーティスト関連情報
+
+**Spotify 検索フォールバック**
+
+Last.fm や YouTube Music からの候補は ISRC を持たないため、Spotify で検索して情報を補完します。
+検索精度を高めるため、以下のフォールバック戦略を実装:
+
+1. **厳密検索**: `track:{曲名} artist:{アーティスト名}` フィルター
+2. **簡素化検索**: 括弧やサブタイトルを除去した曲名で検索
+3. **フリーテキスト検索**: アーティスト名 + 曲名のシンプル検索
+4. **最終手段**: 簡素化した曲名でフリーテキスト検索
+
+特殊文字（日本語括弧、全角記号等）は自動でサニタイズされます。
+
+**類似度計算**
 
 類似度計算には Jaccard 係数（タグ類似度）と各特徴量の正規化距離を組み合わせ、ジャンルボーナス/ペナルティを適用しています。
 

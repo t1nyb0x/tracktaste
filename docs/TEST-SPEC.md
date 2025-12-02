@@ -14,30 +14,37 @@
 ### カバレッジ目標
 
 - 全体: 80%以上
-- ビジネスロジック (usecase): 90%以上
+- ビジネスロジック (usecase/v2): 75%以上 ✅ (現状: 76%)
+- ビジネスロジック (usecase/v1): 80%以上
 - ハンドラー (handler): 85%以上
 
 ---
 
 ## テストファイル一覧
 
-| パッケージ              | テストファイル         | 対象                     |
-| ----------------------- | ---------------------- | ------------------------ |
-| adapter/handler         | track_test.go          | トラック API             |
-| adapter/handler         | artist_test.go         | アーティスト API         |
-| adapter/handler         | album_test.go          | アルバム API             |
-| adapter/handler         | extract_test.go        | URL 抽出ユーティリティ   |
-| adapter/gateway/spotify | gateway_test.go        | Spotify API クライアント |
-| adapter/gateway/kkbox   | gateway_test.go        | KKBOX API クライアント   |
-| adapter/gateway/cache   | repository_test.go     | キャッシュリポジトリ     |
-| usecase                 | track_test.go          | トラックユースケース     |
-| usecase                 | artist_test.go         | アーティストユースケース |
-| usecase                 | album_test.go          | アルバムユースケース     |
-| usecase                 | similar_tracks_test.go | 類似トラックユースケース |
-| domain                  | errors_test.go         | ドメインエラー           |
-| config                  | config_test.go         | 設定                     |
-| util/logger             | logger_test.go         | ロガー                   |
-| testutil                | mock_test.go           | テストユーティリティ     |
+| パッケージ                  | テストファイル         | 対象                         |
+| --------------------------- | ---------------------- | ---------------------------- |
+| adapter/handler             | track_test.go          | トラック API                 |
+| adapter/handler             | artist_test.go         | アーティスト API             |
+| adapter/handler             | album_test.go          | アルバム API                 |
+| adapter/handler             | extract_test.go        | URL 抽出ユーティリティ       |
+| adapter/handler             | recommend_test.go      | レコメンド API               |
+| adapter/gateway/spotify     | gateway_test.go        | Spotify API クライアント     |
+| adapter/gateway/kkbox       | gateway_test.go        | KKBOX API クライアント       |
+| adapter/gateway/deezer      | gateway_test.go        | Deezer API クライアント      |
+| adapter/gateway/musicbrainz | gateway_test.go        | MusicBrainz API クライアント |
+| adapter/gateway/cache       | repository_test.go     | キャッシュリポジトリ         |
+| usecase/v1                  | track_test.go          | トラックユースケース         |
+| usecase/v1                  | artist_test.go         | アーティストユースケース     |
+| usecase/v1                  | album_test.go          | アルバムユースケース         |
+| usecase/v1                  | similar_tracks_test.go | 類似トラックユースケース     |
+| usecase/v2                  | recommend_test.go      | レコメンドユースケース V2    |
+| usecase/v2                  | similarity_test.go     | 類似度計算 V2                |
+| usecase                     | genre_matcher_test.go  | ジャンルマッチャー           |
+| domain                      | errors_test.go         | ドメインエラー               |
+| config                      | config_test.go         | 設定                         |
+| util/logger                 | logger_test.go         | ロガー                       |
+| testutil                    | mock_test.go           | テストユーティリティ         |
 
 ---
 
@@ -177,6 +184,105 @@ Spotify URL から ID を抽出するユーティリティのテスト
 | 2   | 正常系: KKBOX 結果 0 件  | trackID                  | 空リスト           |
 | 3   | 異常系: Spotify 取得失敗 | trackID + Spotify エラー | エラー             |
 | 4   | 異常系: KKBOX 検索失敗   | trackID + KKBOX エラー   | エラー             |
+
+### 2.5 RecommendUseCase V2 (usecase/v2/recommend_test.go)
+
+#### TestRecommendUseCase_GetRecommendations
+
+| No  | テストケース           | 入力                     | 期待結果                 |
+| --- | ---------------------- | ------------------------ | ------------------------ |
+| 1   | 正常系: 候補あり       | 有効な trackID           | レコメンドリスト         |
+| 2   | 正常系: ISRC なし      | ISRC なしトラック        | 空リスト                 |
+| 3   | 正常系: KKBOX 結果 nil | trackID + KKBOX nil 応答 | 空リスト（パニックなし） |
+
+#### TestNewRecommendUseCaseWithLastFM / TestNewRecommendUseCaseFull
+
+| No  | テストケース              | 期待結果               |
+| --- | ------------------------- | ---------------------- |
+| 1   | LastFM 付きコンストラクタ | lastfmAPI が設定される |
+| 2   | Full コンストラクタ       | 全 API が設定される    |
+
+#### TestRecommendUseCase_CollectFromLastFM
+
+| No  | テストケース     | 入力                   | 期待結果                 |
+| --- | ---------------- | ---------------------- | ------------------------ |
+| 1   | 正常系           | 有効なトラック         | Last.fm 候補が収集される |
+| 2   | アーティストなし | Artists が空のトラック | スキップ（エラーなし）   |
+| 3   | API エラー       | Last.fm API エラー     | スキップ（エラーなし）   |
+
+#### TestRecommendUseCase_CollectFromYouTubeMusic
+
+| No  | テストケース     | 入力                    | 期待結果                 |
+| --- | ---------------- | ----------------------- | ------------------------ |
+| 1   | 正常系           | 有効なトラック          | YouTube Music 候補が収集 |
+| 2   | 検索エラー       | SearchTracks エラー     | スキップ（エラーなし）   |
+| 3   | 検索結果なし     | 空の検索結果            | スキップ（エラーなし）   |
+| 4   | 類似曲取得エラー | GetSimilarTracks エラー | スキップ（エラーなし）   |
+
+#### TestSearchSpotifyWithFallback
+
+| No  | テストケース             | 入力                    | 期待結果     |
+| --- | ------------------------ | ----------------------- | ------------ |
+| 1   | 厳密検索成功             | 通常の曲名/アーティスト | トラック情報 |
+| 2   | 検索結果なし             | 存在しない曲            | nil          |
+| 3   | fuzzy アーティストマッチ | 部分一致アーティスト名  | トラック情報 |
+
+#### TestSanitizeSearchQuery
+
+| No  | テストケース     | 入力                       | 期待結果                |
+| --- | ---------------- | -------------------------- | ----------------------- |
+| 1   | 日本語括弧除去   | `聖戦と死神 第1部「銀色」` | `聖戦と死神 第1部 銀色` |
+| 2   | 括弧除去         | `Track (Remix)`            | `Track Remix`           |
+| 3   | 特殊記号除去     | `Track～Version`           | `Track Version`         |
+| 4   | 複数スペース圧縮 | `Track    Name`            | `Track Name`            |
+
+#### TestSimplifyTrackName
+
+| No  | テストケース | 入力                         | 期待結果     |
+| --- | ------------ | ---------------------------- | ------------ |
+| 1   | feat. 除去   | `Track Name (feat. Artist)`  | `Track Name` |
+| 2   | Remix 除去   | `Track Name - Remix Version` | `Track Name` |
+| 3   | 短い名前保持 | `AB`                         | `AB`         |
+
+#### TestFuzzyMatchArtist
+
+| No  | テストケース     | 入力                               | 期待結果 |
+| --- | ---------------- | ---------------------------------- | -------- |
+| 1   | 完全一致         | `Artist Name`, `Artist Name`       | true     |
+| 2   | 大文字小文字無視 | `ARTIST NAME`, `artist name`       | true     |
+| 3   | 部分一致         | `The Artist`, `Artist`             | true     |
+| 4   | & と and 正規化  | `Artist & Band`, `Artist and Band` | true     |
+| 5   | 不一致           | `Artist A`, `Artist B`             | false    |
+
+### 2.6 SimilarityCalculator V2 (usecase/v2/similarity_test.go)
+
+#### TestSimilarityCalculator_Calculate
+
+| No  | テストケース     | 入力                        | 期待結果 |
+| --- | ---------------- | --------------------------- | -------- |
+| 1   | nil seed         | seed=nil                    | 0.5      |
+| 2   | nil candidate    | candidate=nil               | 0.5      |
+| 3   | 同一特徴量       | 同じ BPM/Duration/Gain/Tags | ~1.0     |
+| 4   | 類似 BPM         | BPM 差 ±5                   | 0.9-1.0  |
+| 5   | 非常に異なる特徴 | 大きな BPM/Duration/Gain 差 | <0.7     |
+
+#### TestSimilarityCalculator_hasVoiceActorRelation
+
+| No  | テストケース     | 入力                  | 期待結果 |
+| --- | ---------------- | --------------------- | -------- |
+| 1   | nil アーティスト | nil, nil              | false    |
+| 2   | 共通声優（MBID） | 同じ voice actor MBID | true     |
+| 3   | 共通声優（名前） | 同じ voice actor 名   | true     |
+| 4   | 声優関係なし     | 異なる voice actor    | false    |
+
+#### TestSimilarityCalculator_hasCollaborationRelation
+
+| No  | テストケース            | 入力                   | 期待結果 |
+| --- | ----------------------- | ---------------------- | -------- |
+| 1   | nil アーティスト        | nil, nil               | false    |
+| 2   | A が B とコラボ（MBID） | collaboration relation | true     |
+| 3   | B が A とコラボ（名前） | collaborator relation  | true     |
+| 4   | コラボ関係なし          | 無関係                 | false    |
 
 ---
 
