@@ -613,3 +613,440 @@ func TestFuzzyMatchArtist(t *testing.T) {
 		})
 	}
 }
+
+// Mock for Last.fm API
+type mockLastFMAPI struct {
+	similarTracks []domain.LastFMTrack
+	err           error
+}
+
+func (m *mockLastFMAPI) GetSimilarTracks(ctx context.Context, artist, track string, limit int) ([]domain.LastFMTrack, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.similarTracks, nil
+}
+
+func (m *mockLastFMAPI) GetSimilarTracksByMBID(ctx context.Context, mbid string, limit int) ([]domain.LastFMTrack, error) {
+	return m.similarTracks, nil
+}
+
+// Mock for YouTube Music API
+type mockYTMusicAPI struct {
+	searchResults []domain.YTMusicTrack
+	similarTracks []domain.YTMusicTrack
+	searchErr     error
+	similarErr    error
+}
+
+func (m *mockYTMusicAPI) SearchTracks(ctx context.Context, query string, limit int) ([]domain.YTMusicTrack, error) {
+	if m.searchErr != nil {
+		return nil, m.searchErr
+	}
+	return m.searchResults, nil
+}
+
+func (m *mockYTMusicAPI) GetSimilarTracks(ctx context.Context, videoID string, limit int) ([]domain.YTMusicTrack, error) {
+	if m.similarErr != nil {
+		return nil, m.similarErr
+	}
+	return m.similarTracks, nil
+}
+
+func TestNewRecommendUseCaseWithLastFM(t *testing.T) {
+	spotifyAPI := &mockSpotifyAPI{}
+	kkboxAPI := &mockKKBOXAPI{}
+	deezerAPI := &mockDeezerAPI{}
+	mbAPI := &mockMusicBrainzAPI{}
+	lastfmAPI := &mockLastFMAPI{}
+
+	uc := NewRecommendUseCaseWithLastFM(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, lastfmAPI)
+
+	if uc == nil {
+		t.Fatal("NewRecommendUseCaseWithLastFM returned nil")
+	}
+	if uc.lastfmAPI == nil {
+		t.Error("lastfmAPI should not be nil")
+	}
+}
+
+func TestNewRecommendUseCaseFull(t *testing.T) {
+	spotifyAPI := &mockSpotifyAPI{}
+	kkboxAPI := &mockKKBOXAPI{}
+	deezerAPI := &mockDeezerAPI{}
+	mbAPI := &mockMusicBrainzAPI{}
+	lastfmAPI := &mockLastFMAPI{}
+	ytmusicAPI := &mockYTMusicAPI{}
+
+	uc := NewRecommendUseCaseFull(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, lastfmAPI, ytmusicAPI)
+
+	if uc == nil {
+		t.Fatal("NewRecommendUseCaseFull returned nil")
+	}
+	if uc.lastfmAPI == nil {
+		t.Error("lastfmAPI should not be nil")
+	}
+	if uc.ytmusicAPI == nil {
+		t.Error("ytmusicAPI should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromLastFM(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "Test Track",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "Test Artist"},
+				},
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{
+		tracks:          map[string]*external.KKBOXTrackInfo{},
+		returnNilOnMiss: true,
+	}
+	deezerAPI := &mockDeezerAPI{
+		tracks: map[string]*domain.DeezerTrack{
+			isrc: {ID: 123, Title: "Test Track", ISRC: isrc, BPM: 120.0, DurationSeconds: 200},
+		},
+	}
+	mbAPI := &mockMusicBrainzAPI{
+		recordings: map[string]*domain.MBRecording{
+			isrc: {MBID: "mb-123", Title: "Test Track", ISRC: isrc, ArtistMBID: "mb-artist-123"},
+		},
+		artists: map[string]*domain.MBArtist{
+			"mb-artist-123": {MBID: "mb-artist-123", Name: "Test Artist"},
+		},
+	}
+	lastfmAPI := &mockLastFMAPI{
+		similarTracks: []domain.LastFMTrack{
+			{Name: "Similar Track 1", Artist: "Similar Artist 1", Match: 0.9},
+			{Name: "Similar Track 2", Artist: "Similar Artist 2", Match: 0.8},
+		},
+	}
+
+	uc := NewRecommendUseCaseWithLastFM(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, lastfmAPI)
+
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromLastFM_NoArtist(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:      trackID,
+				Name:    "Test Track",
+				ISRC:    &isrc,
+				Artists: []domain.Artist{}, // No artist
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{returnNilOnMiss: true}
+	deezerAPI := &mockDeezerAPI{tracks: map[string]*domain.DeezerTrack{}}
+	mbAPI := &mockMusicBrainzAPI{}
+	lastfmAPI := &mockLastFMAPI{
+		similarTracks: []domain.LastFMTrack{
+			{Name: "Similar Track", Artist: "Similar Artist"},
+		},
+	}
+
+	uc := NewRecommendUseCaseWithLastFM(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, lastfmAPI)
+
+	// Should not panic, Last.fm collection should be skipped due to no artist
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromLastFM_Error(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "Test Track",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "Test Artist"},
+				},
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{returnNilOnMiss: true}
+	deezerAPI := &mockDeezerAPI{tracks: map[string]*domain.DeezerTrack{}}
+	mbAPI := &mockMusicBrainzAPI{}
+	lastfmAPI := &mockLastFMAPI{
+		err: domain.ErrNotFound, // Simulate API error
+	}
+
+	uc := NewRecommendUseCaseWithLastFM(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, lastfmAPI)
+
+	// Should not fail, just skip Last.fm candidates
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromYouTubeMusic(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "Test Track",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "Test Artist"},
+				},
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{returnNilOnMiss: true}
+	deezerAPI := &mockDeezerAPI{
+		tracks: map[string]*domain.DeezerTrack{
+			isrc: {ID: 123, Title: "Test Track", ISRC: isrc, BPM: 120.0, DurationSeconds: 200},
+		},
+	}
+	mbAPI := &mockMusicBrainzAPI{
+		recordings: map[string]*domain.MBRecording{
+			isrc: {MBID: "mb-123", Title: "Test Track", ISRC: isrc, ArtistMBID: "mb-artist-123"},
+		},
+		artists: map[string]*domain.MBArtist{
+			"mb-artist-123": {MBID: "mb-artist-123", Name: "Test Artist"},
+		},
+	}
+	ytmusicAPI := &mockYTMusicAPI{
+		searchResults: []domain.YTMusicTrack{
+			{VideoID: "video-123", Title: "Test Track", Artist: "Test Artist"},
+		},
+		similarTracks: []domain.YTMusicTrack{
+			{VideoID: "similar-1", Title: "Similar Track 1", Artist: "Similar Artist 1"},
+			{VideoID: "similar-2", Title: "Similar Track 2", Artist: "Similar Artist 2"},
+		},
+	}
+
+	uc := NewRecommendUseCaseFull(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, nil, ytmusicAPI)
+
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromYouTubeMusic_SearchError(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "Test Track",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "Test Artist"},
+				},
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{returnNilOnMiss: true}
+	deezerAPI := &mockDeezerAPI{tracks: map[string]*domain.DeezerTrack{}}
+	mbAPI := &mockMusicBrainzAPI{}
+	ytmusicAPI := &mockYTMusicAPI{
+		searchErr: domain.ErrNotFound,
+	}
+
+	uc := NewRecommendUseCaseFull(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, nil, ytmusicAPI)
+
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromYouTubeMusic_NoSearchResults(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "Test Track",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "Test Artist"},
+				},
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{returnNilOnMiss: true}
+	deezerAPI := &mockDeezerAPI{tracks: map[string]*domain.DeezerTrack{}}
+	mbAPI := &mockMusicBrainzAPI{}
+	ytmusicAPI := &mockYTMusicAPI{
+		searchResults: []domain.YTMusicTrack{}, // Empty results
+	}
+
+	uc := NewRecommendUseCaseFull(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, nil, ytmusicAPI)
+
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestRecommendUseCase_CollectFromYouTubeMusic_SimilarError(t *testing.T) {
+	isrc := "JPAB12345678"
+	trackID := "spotify-track-123"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "Test Track",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "Test Artist"},
+				},
+			},
+		},
+	}
+	kkboxAPI := &mockKKBOXAPI{returnNilOnMiss: true}
+	deezerAPI := &mockDeezerAPI{tracks: map[string]*domain.DeezerTrack{}}
+	mbAPI := &mockMusicBrainzAPI{}
+	ytmusicAPI := &mockYTMusicAPI{
+		searchResults: []domain.YTMusicTrack{
+			{VideoID: "video-123", Title: "Test Track", Artist: "Test Artist"},
+		},
+		similarErr: domain.ErrNotFound,
+	}
+
+	uc := NewRecommendUseCaseFull(spotifyAPI, kkboxAPI, deezerAPI, mbAPI, nil, ytmusicAPI)
+
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+}
+
+func TestSearchSpotifyWithFallback(t *testing.T) {
+	isrc := "JPAB12345678"
+
+	tests := []struct {
+		name        string
+		trackName   string
+		artistName  string
+		mockResults []domain.Track
+		expectFound bool
+	}{
+		{
+			name:       "finds track with exact search",
+			trackName:  "Test Track",
+			artistName: "Test Artist",
+			mockResults: []domain.Track{
+				{ID: "found-1", Name: "Test Track", ISRC: &isrc, Artists: []domain.Artist{{Name: "Test Artist"}}},
+			},
+			expectFound: true,
+		},
+		{
+			name:        "returns nil when not found",
+			trackName:   "Unknown Track",
+			artistName:  "Unknown Artist",
+			mockResults: []domain.Track{},
+			expectFound: false,
+		},
+		{
+			name:       "finds track with fuzzy artist match",
+			trackName:  "Test Track",
+			artistName: "The Test Artist",
+			mockResults: []domain.Track{
+				{ID: "found-1", Name: "Test Track", ISRC: &isrc, Artists: []domain.Artist{{Name: "Test Artist"}}},
+			},
+			expectFound: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spotifyAPI := &mockSpotifyAPIWithSearch{
+				searchResults: tt.mockResults,
+			}
+			kkboxAPI := &mockKKBOXAPI{}
+			deezerAPI := &mockDeezerAPI{}
+			mbAPI := &mockMusicBrainzAPI{}
+
+			uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
+
+			result := uc.searchSpotifyWithFallback(context.Background(), tt.trackName, tt.artistName)
+
+			if tt.expectFound && result == nil {
+				t.Error("expected to find track, but got nil")
+			}
+			if !tt.expectFound && result != nil {
+				t.Error("expected nil, but found track")
+			}
+		})
+	}
+}
+
+// Extended mock for SearchTracks testing
+type mockSpotifyAPIWithSearch struct {
+	mockSpotifyAPI
+	searchResults []domain.Track
+}
+
+func (m *mockSpotifyAPIWithSearch) SearchTracks(ctx context.Context, query string) ([]domain.Track, error) {
+	return m.searchResults, nil
+}
