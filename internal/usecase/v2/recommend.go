@@ -129,6 +129,7 @@ func (uc *RecommendUseCase) GetRecommendations(
 	logger.Info("RecommendV2", fmt.Sprintf("候補トラック数: %d", len(candidates)))
 
 	if len(candidates) == 0 {
+		logger.Info("RecommendV2", "レコメンドできる曲がありませんでした")
 		return &domain.RecommendResult{
 			SeedTrack:    *track,
 			SeedFeatures: seedFeatures,
@@ -305,6 +306,11 @@ func (uc *RecommendUseCase) collectCandidatesV2(
 		logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
 		return nil
 	}
+	if kkboxTrack == nil {
+		// Track not found in KKBOX catalog (not an error)
+		logger.Info("RecommendV2", "KKBOX: 曲が見つかりませんでした")
+		return nil
+	}
 
 	similarTracks, err := uc.kkboxAPI.GetRecommendedTracks(ctx, kkboxTrack.ID)
 	if err != nil {
@@ -340,7 +346,7 @@ func (uc *RecommendUseCase) collectCandidatesV2(
 		})
 	}
 
-	// Keep up to kkboxCandidateLimitV2 (50) - will be filtered by genre later
+	// Keep up to kkboxCandidateLimitV2 (30) - will be filtered by genre later
 	if len(candidates) > kkboxCandidateLimitV2 {
 		candidates = candidates[:kkboxCandidateLimitV2]
 	}
@@ -450,6 +456,11 @@ func (uc *RecommendUseCase) collectFromKKBOX(ctx context.Context, seedTrack *dom
 		logger.Warning("RecommendV2", "KKBOX ISRC検索エラー: "+err.Error())
 		return nil
 	}
+	if kkboxTrack == nil {
+		// Track not found in KKBOX catalog (not an error)
+		logger.Info("RecommendV2", "KKBOX: 曲が見つかりませんでした")
+		return nil
+	}
 
 	similarTracks, err := uc.kkboxAPI.GetRecommendedTracks(ctx, kkboxTrack.ID)
 	if err != nil {
@@ -494,6 +505,10 @@ func (uc *RecommendUseCase) collectFromLastFM(ctx context.Context, seedTrack *do
 		logger.Warning("RecommendV2", "Last.fm類似曲取得エラー: "+err.Error())
 		return nil
 	}
+	if len(similarTracks) == 0 {
+		logger.Info("RecommendV2", "Last.fm: 類似曲が見つかりませんでした")
+		return nil
+	}
 
 	// Convert to domain.Track (will be enriched with Spotify later)
 	candidates := make([]domain.Track, 0, len(similarTracks))
@@ -516,6 +531,10 @@ func (uc *RecommendUseCase) collectFromMusicBrainzArtist(ctx context.Context, ar
 	recordings, err := uc.musicBrainzAPI.GetArtistRecordings(ctx, artistMBID, mbArtistCandidateLimitV2)
 	if err != nil {
 		logger.Warning("RecommendV2", "MusicBrainzアーティスト曲取得エラー: "+err.Error())
+		return nil
+	}
+	if len(recordings) == 0 {
+		logger.Info("RecommendV2", "MusicBrainz: アーティストの曲が見つかりませんでした")
 		return nil
 	}
 
@@ -574,6 +593,10 @@ func (uc *RecommendUseCase) collectFromYouTubeMusic(ctx context.Context, seedTra
 	similarTracks, err := uc.ytmusicAPI.GetSimilarTracks(ctx, videoID, ytmusicCandidateLimitV2)
 	if err != nil {
 		logger.Warning("RecommendV2", "YouTube Music類似曲取得エラー: "+err.Error())
+		return nil
+	}
+	if len(similarTracks) == 0 {
+		logger.Info("RecommendV2", "YouTube Music: 類似曲が見つかりませんでした")
 		return nil
 	}
 

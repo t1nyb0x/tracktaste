@@ -136,13 +136,17 @@ func (m *mockSpotifyAPI) GetArtistGenresBatch(ctx context.Context, artistIDs []s
 }
 
 type mockKKBOXAPI struct {
-	tracks      map[string]*external.KKBOXTrackInfo
-	recommended []external.KKBOXTrackInfo
+	tracks          map[string]*external.KKBOXTrackInfo
+	recommended     []external.KKBOXTrackInfo
+	returnNilOnMiss bool // if true, return (nil, nil) instead of (nil, error) when track not found
 }
 
 func (m *mockKKBOXAPI) SearchByISRC(ctx context.Context, isrc string) (*external.KKBOXTrackInfo, error) {
 	if track, ok := m.tracks[isrc]; ok {
 		return track, nil
+	}
+	if m.returnNilOnMiss {
+		return nil, nil
 	}
 	return nil, domain.ErrNotFound
 }
@@ -389,5 +393,88 @@ func TestNewRecommendUseCase(t *testing.T) {
 	}
 	if uc.genreMatcher == nil {
 		t.Error("genreMatcher should not be nil")
+	}
+}
+
+func TestRecommendUseCase_GetRecommendations_KKBOXTrackNotFound(t *testing.T) {
+	// Test case for the specific issue: when KKBOX returns nil for SearchByISRC
+	// This should not panic, but should return empty recommendations
+	isrc := "USRC17607839"
+	trackID := "087sGVlyEXq6bDpgnGx78E"
+	artistID := "spotify-artist-123"
+
+	spotifyAPI := &mockSpotifyAPI{
+		tracks: map[string]*domain.Track{
+			trackID: {
+				ID:   trackID,
+				Name: "A SEAZER 絶対運命黙示録・完全版",
+				ISRC: &isrc,
+				Artists: []domain.Artist{
+					{ID: artistID, Name: "J.A. Seazer"},
+				},
+			},
+		},
+		artists: map[string][]string{
+			artistID: {"anime", "jpop"},
+		},
+	}
+
+	// KKBOX returns nil for this ISRC (not found in KKBOX catalog)
+	kkboxAPI := &mockKKBOXAPI{
+		tracks:          map[string]*external.KKBOXTrackInfo{},
+		returnNilOnMiss: true, // Simulate real KKBOX behavior: returns (nil, nil) when not found
+	}
+
+	deezerAPI := &mockDeezerAPI{
+		tracks: map[string]*domain.DeezerTrack{
+			isrc: {
+				ID:              123,
+				Title:           "A SEAZER 絶対運命黙示録・完全版",
+				ISRC:            isrc,
+				BPM:             120.0,
+				DurationSeconds: 300,
+				Gain:            -7.0,
+			},
+		},
+	}
+
+	mbAPI := &mockMusicBrainzAPI{
+		recordings: map[string]*domain.MBRecording{
+			isrc: {
+				MBID:       "mb-recording-123",
+				Title:      "A SEAZER 絶対運命黙示録・完全版",
+				ISRC:       isrc,
+				Tags:       []domain.MBTag{{Name: "anime", Count: 10}},
+				ArtistMBID: "mb-artist-123",
+			},
+		},
+		artists: map[string]*domain.MBArtist{
+			"mb-artist-123": {
+				MBID: "mb-artist-123",
+				Name: "J.A. Seazer",
+				Tags: []domain.MBTag{{Name: "japanese", Count: 10}},
+			},
+		},
+	}
+
+	uc := NewRecommendUseCase(spotifyAPI, kkboxAPI, deezerAPI, mbAPI)
+
+	// This should not panic even though KKBOX returns nil
+	result, err := uc.GetRecommendations(context.Background(), trackID, domain.RecommendModeBalanced, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("result should not be nil")
+	}
+
+	if result.SeedTrack.ID != trackID {
+		t.Errorf("SeedTrack.ID = %s, want %s", result.SeedTrack.ID, trackID)
+	}
+
+	// Should return empty recommendations since KKBOX has no data
+	if len(result.Items) != 0 {
+		t.Errorf("expected 0 items when KKBOX returns nil, got %d", len(result.Items))
 	}
 }
